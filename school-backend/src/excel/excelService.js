@@ -1,0 +1,1 @@
+// Reserved for the next phase. PDF reporting is implemented first.\nexport function createExcelReport(){ throw new Error('Excel report generation is not enabled in this version.'); }\n

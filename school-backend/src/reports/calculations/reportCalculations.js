@@ -1,0 +1,1 @@
+export function summarize(rows){const moneyKeys=['total_paid','total_due','balance_amt','amount_paid','total_amount'];const totals={};for(const k of moneyKeys){const v=rows.reduce((s,r)=>s+(Number(r[k])||0),0);if(v)totals[k]=v;}return {rowCount:rows.length,totals};}

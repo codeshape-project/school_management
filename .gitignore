@@ -1,0 +1,37 @@
+# Dependencies (matches in any subfolder)
+node_modules/
+
+# Environment files (passwords and secrets)
+.env
+.env.*
+!.env.example
+
+# Frontend build output
+dist/
+build/
+.vite/
+.cache/
+
+# Backend uploads (keep the empty folder)
+school-backend/uploads/*
+!school-backend/uploads/.gitkeep
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test coverage
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp

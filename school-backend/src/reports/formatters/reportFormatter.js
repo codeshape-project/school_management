@@ -1,0 +1,1 @@
+export function formatReport(rows){return rows.map(r=>{const copy={...r}; delete copy.form_data; return copy;});}

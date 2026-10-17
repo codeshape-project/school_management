@@ -1,0 +1,1 @@
+const allowed=new Set(['session','class_name','section','status','payment_mode','vehicle_no','route_name']); export function buildGroupBy(groupBy){return allowed.has(groupBy)?groupBy:null;}

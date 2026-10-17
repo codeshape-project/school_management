@@ -1,0 +1,1 @@
+-- Add school vehicles here when vehicle details are finalized.

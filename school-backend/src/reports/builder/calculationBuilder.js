@@ -1,0 +1,1 @@
+export function calculateSummary(rows){return {totalRows:rows.length, totalPaid:rows.reduce((s,r)=>s+(Number(r.total_paid)||Number(r.totalPaid)||0),0), totalDue:rows.reduce((s,r)=>s+(Number(r.total_due)||Number(r.totalDue)||0),0)}}

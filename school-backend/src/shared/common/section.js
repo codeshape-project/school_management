@@ -1,0 +1,1 @@
+import { query } from '../../config/db.js'; export const listSections=async(classId=null)=> (await query(classId?'SELECT * FROM sections WHERE class_id=$1 ORDER BY name':'SELECT * FROM sections ORDER BY name',classId?[classId]:[])).rows;

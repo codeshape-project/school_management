@@ -1,0 +1,1 @@
+-- Fee types are stored inside fee_formats.form_data so the frontend can use its exact fee fields.

@@ -1,0 +1,1 @@
+INSERT INTO classes(name,display_order) VALUES ('Nursery',1),('LKG',2),('UKG',3),('Class 1',4),('Class 2',5),('Class 3',6),('Class 4',7),('Class 5',8),('Class 6',9),('Class 7',10),('Class 8',11),('Class 9',12),('Class 10',13),('Class 11',14),('Class 12',15) ON CONFLICT (name) DO NOTHING;

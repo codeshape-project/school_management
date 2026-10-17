@@ -1,0 +1,1 @@
+import { query } from '../../config/db.js'; export const listClasses=async()=> (await query('SELECT * FROM classes ORDER BY display_order,name')).rows;

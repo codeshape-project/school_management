@@ -1,0 +1,2 @@
+-- Admin is created/updated by src/auth/auth.js from ADMIN_NAME, ADMIN_EMAIL and ADMIN_PASSWORD in .env.
+-- Do not put the plaintext admin password in this SQL file.
