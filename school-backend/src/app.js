@@ -8,7 +8,7 @@ import { env } from './config/env.js'; import { notFoundMiddleware } from './mid
 
 const app=express();
 app.use(helmet()); app.use(cors({origin:env.frontendUrl,credentials:false})); app.use(express.json({limit:'10mb'})); app.use(express.urlencoded({extended:true,limit:'10mb'})); app.use(morgan('dev'));
-app.get('/api/health',(_req,res)=>res.json({success:true,message:'School Management API is running.'}));
+app.get('/',(_req,res)=>res.json({success:true,message:'School Management API is running.'}));
 app.use('/api/auth',authRoutes); app.use('/api/dashboard',dashboardRoutes); app.use('/api/reports',reportRoutes);
 app.use('/api/student',studentRoutes); app.use('/api/student-ledger',studentLedgerRoutes); app.use('/api/fee-dues',feeDuesRoutes); app.use('/api/fee-format',feeFormatRoutes);
 app.use('/api/enquiries',enquiryRoutes); app.use('/api/student-report',studentReportRoutes); app.use('/api/registrations',registrationRoutes); app.use('/api/complaints',complaintRoutes); app.use('/api/transfer-certificates',tcRoutes);
