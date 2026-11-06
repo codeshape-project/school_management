@@ -840,26 +840,90 @@
 //   );
 // }
 
-import { saveForm } from "../../api/formApi";
-import { useState } from "react";
+import { saveForm, searchRecords } from "../../api/formApi";
+import { useEffect, useRef, useState } from "react";
 import {
   FilePenLine,
   Search,
   Save,
   X,
-  Send,
-  Pencil,
-  Plus,
 } from "lucide-react";
 
 export default function RegistrationForm({ onClose }) {
-  const [saved, setSaved] = useState(false);
+    const [saved, setSaved] = useState(false);
+  const formRef = useRef(null);
+
+  /* ---------- search boxes ---------- */
+  const [enquiryBy, setEnquiryBy] = useState("studentName");
+  const [enquiryValue, setEnquiryValue] = useState("");
+  const enquirySearch = useRecordSearch("enquiry", enquiryBy, enquiryValue);
+
+  const [studentBy, setStudentBy] = useState("formNo");
+  const [studentValue, setStudentValue] = useState("");
+  const studentSearch = useRecordSearch(
+    "registration",
+    studentBy,
+    studentValue
+  );
+
+  // put values into the form fields (fields are matched by their name)
+  const fillForm = (values) => {
+    const formEl = formRef.current;
+    if (!formEl) return;
+
+    Object.entries(values).forEach(([name, value]) => {
+      const el = formEl.elements[name];
+
+      if (!el || el instanceof RadioNodeList) return;
+      if (value === undefined || value === null) return;
+
+      el.value = String(value);
+    });
+  };
+
+  const pickEnquiry = (row) => {
+    const data = row.form_data || {};
+
+    fillForm({
+      enquiryNo: row.record_no,
+      studentName: row.name || data.name,
+      fatherName: data.fatherName,
+      motherName: data.motherName,
+      address: data.address,
+      contactNo: row.phone || data.mobile,
+      className: row.class_name || data.className,
+      session: data.session,
+    });
+
+    setEnquiryValue("");
+  };
+
+  const pickStudent = (row) => {
+    const data = { ...(row.form_data || {}) };
+
+    Object.keys(data).forEach((key) => {
+      if (key.startsWith("search")) delete data[key];
+    });
+
+    fillForm({ ...data, formNo: data.formNo || row.record_no });
+
+    setStudentValue("");
+  };
 
   const submit = async (e) => {
     e.preventDefault();
 
     try {
-      await saveForm("registration", e.currentTarget);
+      const data = Object.fromEntries(
+        new FormData(e.currentTarget).entries()
+      );
+
+      // search boxes are not part of the registration data
+      Object.keys(data).forEach((key) => {
+        if (key.startsWith("search")) delete data[key];
+      });
+
+      await saveForm("registration", data);
 
       setSaved(true);
 
@@ -872,7 +936,8 @@ export default function RegistrationForm({ onClose }) {
   };
 
   return (
-    <form
+       <form
+      ref={formRef}
       onSubmit={submit}
       className="
         flex
@@ -1340,25 +1405,42 @@ export default function RegistrationForm({ onClose }) {
               </div>
 
               <div className="mb-1.5 flex flex-wrap gap-3">
-                <RadioOption
+                                <RadioOption
                   label="By Student Name"
                   name="searchEnquiry"
                   value="studentName"
                   defaultChecked
+                  onChange={() => setEnquiryBy("studentName")}
                 />
 
                 <RadioOption
                   label="By Father Name"
                   name="searchEnquiry"
                   value="fatherName"
+                  onChange={() => setEnquiryBy("fatherName")}
                 />
               </div>
 
               <input
                 name="searchEnquiryValue"
                 type="text"
+                value={enquiryValue}
+                onChange={(e) => setEnquiryValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
                 placeholder="Search enquiry..."
                 className={inputClass}
+              />
+
+              <SearchResults
+                search={enquirySearch}
+                onPick={pickEnquiry}
+                badge={(row) => row.record_no}
+                title={(row) => row.name || row.form_data?.name || "-"}
+                detail={(row) =>
+                  `Father: ${row.form_data?.fatherName || "-"}  |  Class: ${
+                    row.class_name || "-"
+                  }  |  Mobile: ${row.phone || "-"}`
+                }
               />
             </section>
 
@@ -1392,25 +1474,42 @@ export default function RegistrationForm({ onClose }) {
               </div>
 
               <div className="mb-1.5 flex flex-wrap gap-3">
-                <RadioOption
+                                <RadioOption
                   label="By Form No"
                   name="searchStudent"
                   value="formNo"
                   defaultChecked
+                  onChange={() => setStudentBy("formNo")}
                 />
 
                 <RadioOption
                   label="By Name"
                   name="searchStudent"
                   value="name"
+                  onChange={() => setStudentBy("name")}
                 />
               </div>
 
               <input
                 name="searchStudentValue"
                 type="text"
+                value={studentValue}
+                onChange={(e) => setStudentValue(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
                 placeholder="Search student..."
                 className={inputClass}
+              />
+
+              <SearchResults
+                search={studentSearch}
+                onPick={pickStudent}
+                badge={(row) => row.form_data?.formNo || row.record_no}
+                title={(row) => row.name || row.form_data?.studentName || "-"}
+                detail={(row) =>
+                  `Class: ${row.class_name || "-"}  |  Contact: ${
+                    row.phone || "-"
+                  }`
+                }
               />
             </section>
 
@@ -1497,11 +1596,11 @@ export default function RegistrationForm({ onClose }) {
             sm:justify-start
           "
         >
-          <ActionButton
+          {/* <ActionButton
             type="button"
             icon={<Plus size={14} strokeWidth={2.5} />}
             label="New"
-          />
+          /> */}
 
           <ActionButton
             type="submit"
@@ -1510,7 +1609,7 @@ export default function RegistrationForm({ onClose }) {
             green
           />
 
-          <ActionButton
+          {/* <ActionButton
             type="button"
             icon={<Send size={14} strokeWidth={2.5} />}
             label="Form Submit"
@@ -1520,7 +1619,7 @@ export default function RegistrationForm({ onClose }) {
             type="button"
             icon={<Pencil size={14} strokeWidth={2.5} />}
             label="Modify"
-          />
+          /> */}
 
           <ActionButton
             type="button"
@@ -1657,6 +1756,7 @@ function RadioOption({
   name,
   value,
   defaultChecked = false,
+  onChange,
 }) {
   return (
     <label className="flex cursor-pointer items-center gap-1.5">
@@ -1665,6 +1765,7 @@ function RadioOption({
         name={name}
         value={value}
         defaultChecked={defaultChecked}
+        onChange={onChange}
         className="h-3.5 w-3.5 accent-[#174f7b]"
       />
 
@@ -1765,5 +1866,100 @@ function ActionButton({
       {icon}
       {label}
     </button>
+
   );
+  /* =========================================================
+   LIVE SEARCH (runs 0.35s after typing stops)
+========================================================= */
+
+function useRecordSearch(type, by, value) {
+  const [results, setResults] = useState([]);
+  const [status, setStatus] = useState("idle"); // idle | loading | done | empty | error
+
+  useEffect(() => {
+    const term = value.trim();
+
+    if (!term) {
+      setResults([]);
+      setStatus("idle");
+      return undefined;
+    }
+
+    let cancelled = false;
+    setStatus("loading");
+
+    const timer = setTimeout(async () => {
+      try {
+        const result = await searchRecords(type, by, term);
+        if (cancelled) return;
+
+        const rows = result?.data || [];
+        setResults(rows);
+        setStatus(rows.length ? "done" : "empty");
+      } catch {
+        if (!cancelled) {
+          setResults([]);
+          setStatus("error");
+        }
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [type, by, value]);
+
+  return { results, status };
+}
+
+/* =========================================================
+   SEARCH RESULT LIST
+========================================================= */
+
+function SearchResults({ search, onPick, badge, title, detail }) {
+  if (search.status === "idle") return null;
+
+  if (search.status !== "done") {
+    const text =
+      search.status === "loading"
+        ? "Searching..."
+        : search.status === "empty"
+        ? "No record found."
+        : "Unable to search.";
+
+    return (
+      <p className="mt-1 px-1 text-[9px] font-semibold text-[#173b5c]/70">
+        {text}
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-1.5 max-h-[140px] space-y-1 overflow-y-auto rounded-md border border-[#a2b9c8] bg-[#edf4f8] p-1">
+      {search.results.map((row) => (
+        <button
+          type="button"
+          key={row.id}
+          onClick={() => onPick(row)}
+          className="w-full rounded-md border border-[#79a9c9] bg-white px-2 py-1 text-left transition-all hover:border-[#0b5fa5] hover:bg-[#eef6fb]"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-[10px] font-bold text-[#173b5c]">
+              {title(row)}
+            </span>
+
+            <span className="shrink-0 rounded-md bg-[#174f7b] px-1.5 py-0.5 text-[8px] font-bold text-[#ffd75a]">
+              {badge(row)}
+            </span>
+          </div>
+
+          <div className="mt-0.5 truncate text-[9px] text-[#173b5c]/70">
+            {detail(row)}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
 }

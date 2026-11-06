@@ -197,12 +197,28 @@ export async function apiFetch(
   const data =
     await parseResponse(response);
 
+//   if (!response.ok) {
+//     throw new Error(
+//       data?.message ||
+//         data?.error ||
+//         "Request failed."
+//     );
+//   }
+
+//   return data;
+// }
   if (!response.ok) {
-    throw new Error(
+    if (response.status === 401 && token) {
+      window.dispatchEvent(new Event("school:unauthorized"));
+    }
+
+    const error = new Error(
       data?.message ||
         data?.error ||
         "Request failed."
     );
+    error.status = response.status;
+    throw error;
   }
 
   return data;
@@ -296,76 +312,54 @@ export async function uploadStudentPhoto(
 }
 
 /* =====================================================
-   REPORT PREVIEW
+   REPORTS
 ===================================================== */
 
-export async function previewReport(
-  body
-) {
+export async function previewReport(body) {
+  return apiFetch("/reports/preview", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+// Student / Fee / Transport -> report types
+export async function getReportSources() {
+  return apiFetch("/reports/sources");
+}
+
+// columns + dropdown values for one report type
+export async function getReportMeta(source) {
   return apiFetch(
-    "/reports/preview",
-    {
-      method: "POST",
-      body: JSON.stringify(body),
-    }
+    `/reports/meta?source=${encodeURIComponent(source)}`
   );
 }
 
-/* =====================================================
-   REPORT FIELDS
-===================================================== */
-
-export async function getReportFields() {
+export async function getReportFields(source) {
   return apiFetch(
-    "/reports/fields"
+    `/reports/fields?source=${encodeURIComponent(source || "students")}`
   );
 }
 
-/* =====================================================
-   REPORT PDF DOWNLOAD
-===================================================== */
+async function downloadReportFile(path, body, fallbackMessage) {
+  const token = localStorage.getItem("school_token");
 
-export async function downloadReportPdf(
-  body
-) {
-  const token =
-    localStorage.getItem(
-      "school_token"
-    );
+  const headers = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = `Bearer ${token}`;
 
-  const headers = {
-    "Content-Type":
-      "application/json",
-  };
-
-  if (token) {
-    headers.Authorization =
-      `Bearer ${token}`;
-  }
-
-  const response = await fetch(
-    `${API_BASE}/reports/pdf/download`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    }
-  );
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
 
   if (!response.ok) {
-    let message =
-      "Unable to download PDF.";
+    let message = fallbackMessage;
 
     try {
-      const data =
-        await response.json();
-
-      message =
-        data?.message ||
-        data?.error ||
-        message;
+      const data = await response.json();
+      message = data?.message || data?.error || message;
     } catch {
-      // Ignore non-JSON error response
+      // not a JSON error response
     }
 
     throw new Error(message);
@@ -374,6 +368,33 @@ export async function downloadReportPdf(
   return response.blob();
 }
 
+export function downloadReportPdf(body) {
+  return downloadReportFile(
+    "/reports/pdf/download",
+    body,
+    "Unable to download PDF."
+  );
+}
+
+export function downloadReportExcel(body) {
+  return downloadReportFile(
+    "/reports/excel/download",
+    body,
+    "Unable to download Excel file."
+  );
+}
+ /* =====================================================
+   SEARCH SAVED RECORDS
+   by: name | mobile | fatherName | enquiredBy | admissionNo ...
+===================================================== */
+
+export async function searchRecords(type, by, q) {
+  const params = new URLSearchParams({ by: by || "", q: q || "" });
+
+  return apiFetch(
+    `${getFormEndpoint(type)}/search?${params.toString()}`
+  );
+}
 /* =====================================================
    FORM ENDPOINTS
 ===================================================== */

@@ -1,4 +1,4 @@
-import { saveForm } from "../../api/formApi";
+import { saveForm, searchRecords } from "../../api/formApi";
 
 import { useState } from "react";
 import {
@@ -27,11 +27,11 @@ export default function EnquiryForm({ onClose }) {
     motherName: "",
     purpose: "",
     address: "",
-    zone: "",
+    // zone: "",
     mobile: "",
     occupation: "",
-    introducedBy: "",
-    representative: "",
+    // introducedBy: "",
+    // representative: "",
     remark: "",
     searchType: "Student Name",
     searchValue: "",
@@ -77,11 +77,11 @@ export default function EnquiryForm({ onClose }) {
       motherName: "",
       purpose: "",
       address: "",
-      zone: "",
+      // zone: "",
       mobile: "",
       occupation: "",
-      introducedBy: "",
-      representative: "",
+      // introducedBy: "",
+      // representative: "",
       remark: "",
       searchType: "Student Name",
       searchValue: "",
@@ -90,23 +90,46 @@ export default function EnquiryForm({ onClose }) {
     setSearchResults([]);
   };
 
-  const handleSearch = (e) => {
+   const SEARCH_FIELD = {
+    "Enquired By": "enquiredBy",
+    "Student Name": "name",
+    "Father Name": "fatherName",
+    "Mobile No.": "mobile",
+  };
+
+  const handleSearch = async (e) => {
     e.preventDefault();
 
-    if (!form.searchValue.trim()) {
+    const value = form.searchValue.trim();
+
+    if (!value) {
       setSearchResults([]);
       return;
     }
 
-    // Frontend-only demo search.
-    setSearchResults([
-      {
-        id: "ENQ-001",
-        name: form.searchValue,
-        className: "Class 6",
-        mobile: "98XXXXXXXX",
-      },
-    ]);
+    try {
+      const result = await searchRecords(
+        "enquiry",
+        SEARCH_FIELD[form.searchType],
+        value
+      );
+
+      const rows = result?.data || [];
+
+      setSearchResults(
+        rows.map((row) => ({
+          id: row.record_no,
+          name: row.name || row.form_data?.name || "-",
+          className: row.class_name || row.form_data?.className || "-",
+          mobile: row.phone || row.form_data?.mobile || "-",
+        }))
+      );
+
+      if (!rows.length) alert("No enquiry found.");
+    } catch (err) {
+      setSearchResults([]);
+      alert(err.message || "Unable to search.");
+    }
   };
 
   const inputClass = `
@@ -559,21 +582,12 @@ export default function EnquiryForm({ onClose }) {
                 className={selectClass}
               >
                 <option value="">Select</option>
-                <option>Nursery</option>
-                <option>LKG</option>
-                <option>UKG</option>
-                <option>Class 1</option>
-                <option>Class 2</option>
-                <option>Class 3</option>
-                <option>Class 4</option>
-                <option>Class 5</option>
-                <option>Class 6</option>
-                <option>Class 7</option>
-                <option>Class 8</option>
-                <option>Class 9</option>
-                <option>Class 10</option>
-                <option>Class 11</option>
-                <option>Class 12</option>
+                <option>Mother</option>
+                <option>Father</option>
+                <option>sister</option>
+                <option>Brother</option>
+                <option>Relative</option>
+      
               </select>
             </div>
 
@@ -628,7 +642,7 @@ export default function EnquiryForm({ onClose }) {
             </div>
 
             {/* ZONE */}
-            <div className="mt-2 grid grid-cols-[1fr_36px] items-end gap-1.5">
+            {/* <div className="mt-2 grid grid-cols-[1fr_36px] items-end gap-1.5">
               <div>
                 <label className={labelClass}>Zone</label>
 
@@ -669,7 +683,7 @@ export default function EnquiryForm({ onClose }) {
               >
                 +
               </button>
-            </div>
+            </div> */}
 
             {/* MOBILE + OCCUPATION */}
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -699,7 +713,7 @@ export default function EnquiryForm({ onClose }) {
             </div>
 
             {/* INTRODUCED BY + REPRESENTATIVE */}
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {/* <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Introduced By</label>
 
@@ -728,7 +742,7 @@ export default function EnquiryForm({ onClose }) {
                   <option>Representative 3</option>
                 </select>
               </div>
-            </div>
+            </div> */}
 
             {/* REMARK */}
             <div className="mt-2">

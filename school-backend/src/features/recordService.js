@@ -1,6 +1,44 @@
 import { query } from '../config/db.js';
 import { generateNumber } from '../utils/generateNumber.js';
 
+/* Search saved records by one field (used by the search box on forms) */
+const SEARCH_EXPR = {
+  name: 'name',
+  mobile: 'phone',
+  phone: 'phone',
+  admissionNo: 'admission_no',
+  fatherName: "form_data->>'fatherName'",
+  motherName: "form_data->>'motherName'",
+  enquiredBy: "form_data->>'enquiredBy'",
+    studentName: 'name',
+  formNo: "(COALESCE(form_data->>'formNo', '') || ' ' || record_no)",
+};
+
+export async function searchRecords(type, { by, q, limit } = {}) {
+  const table = TABLE_MAP[type];
+  if (!table) throw Object.assign(new Error(`Unknown form type: ${type}`), { status: 400 });
+
+  const term = String(q || '').trim();
+  if (!term) return [];
+
+  const expr = SEARCH_EXPR[by];
+  const where = expr
+    ? `${expr} ILIKE $1`
+    : `(name ILIKE $1 OR phone ILIKE $1 OR admission_no ILIKE $1 OR form_data::text ILIKE $1)`;
+
+  const max = Math.min(Math.max(Number(limit) || 50, 1), 200);
+
+  const result = await query(
+    `SELECT id, record_no, name, class_name, section, phone, admission_no, status, created_at, form_data
+       FROM ${table}
+      WHERE ${where}
+      ORDER BY created_at DESC
+      LIMIT ${max}`,
+    [`%${term}%`]
+  );
+  return result.rows;
+}
+
 export const TABLE_MAP = Object.freeze({
   enquiry: 'enquiries', registration: 'registrations', admission: 'students', student: 'students',
   studentReport: 'students', transferCertificate: 'transfer_certificates', complaint: 'complaints',

@@ -22,13 +22,22 @@ const modules = {
 };
 
 export default function Dashboard({ onLogout }) {
-  const [module, setModule] = useState("Main");
-  const [toast, setToast] = useState(true);
-
+   const [module, setModule] = useState(
+    () => sessionStorage.getItem("school_module") || "Main"
+  );
+    // popup only right after a fresh login, not on page refresh
+  const [toast, setToast] = useState(
+    () => sessionStorage.getItem("school_just_logged_in") === "1"
+  );
   useEffect(() => {
+     sessionStorage.removeItem("school_just_logged_in");
     const t = setTimeout(() => setToast(false), 2800);
     return () => clearTimeout(t);
   }, []);
+
+    useEffect(() => {
+    sessionStorage.setItem("school_module", module);
+  }, [module]);
 
   const openModule = name => setModule(name);
   let content = <MainDashboard onOpenModule={openModule} onLogout={onLogout} />;
