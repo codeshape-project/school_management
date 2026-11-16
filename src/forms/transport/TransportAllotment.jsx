@@ -966,8 +966,8 @@
 // }
 
 
-import { saveForm } from "../../api/formApi";
-import { useState } from "react";
+import { saveForm, searchRecords } from "../../api/formApi";
+import { useEffect, useState } from "react";
 import {
   Search,
   Printer,
@@ -1029,7 +1029,38 @@ export default function TransportAllotment({ onClose }) {
   });
 
   const [rows, setRows] = useState(createRows());
+  /* ---------- search student ---------- */
+  const [searchTick, setSearchTick] = useState(0);
+  const studentSearch = useRecordSearch(
+    "student",
+    form.searchStudent,
+    searchTick
+  );
 
+  // fill the allotment form from the selected student
+  function pickStudent(row) {
+    const d = row.form_data || {};
+
+    // this form's class list is Nursery, LKG, UKG, 1, 2, 3 ... (no "Class " prefix)
+    const rawClass = String(row.class_name || d.className || "");
+    const className = /^select/i.test(rawClass)
+      ? ""
+      : rawClass.replace(/^class\s*/i, "");
+
+    setForm((prev) => ({
+      ...prev,
+      admissionNo: row.admission_no || d.admissionNo || prev.admissionNo,
+      computerId: d.computerId || prev.computerId,
+      name: row.name || d.name || prev.name,
+      className: className || prev.className,
+      section: row.section || d.section || prev.section,
+      fatherName: d.fatherName || prev.fatherName,
+      address: d.presentAddress || d.address || prev.address,
+      searchStudent: "",
+    }));
+
+    setSaved(false);
+  }
   function handleChange(e) {
     const { name, value } = e.target;
 
@@ -1064,6 +1095,7 @@ export default function TransportAllotment({ onClose }) {
 
       // Add month-wise transport allotment rows
       data.rows = rows;
+      delete data.searchStudent;
 
       await saveForm("transportAllotment", createFakeForm(data));
 
@@ -1542,11 +1574,17 @@ export default function TransportAllotment({ onClose }) {
               Search Student
             </div>
 
-            <input
+                       <input
               name="searchStudent"
               value={form.searchStudent}
               onChange={handleChange}
-              placeholder="Type to search..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  setSearchTick((n) => n + 1);
+                }
+              }}
+              placeholder="Name, admission no., father, contact..."
               className={inputClass}
             />
 
@@ -1554,13 +1592,20 @@ export default function TransportAllotment({ onClose }) {
               className="
                 mt-2
                 h-[140px]
+                overflow-y-auto
                 rounded-md
                 border
                 border-[#a2b9c8]
                 bg-[#edf4f8]
+                p-1
                 lg:h-[300px]
               "
-            />
+            >
+              <SearchList
+                search={studentSearch}
+                onPick={pickStudent}
+              />
+            </div>
           </section>
         </div>
 
@@ -1968,8 +2013,13 @@ export default function TransportAllotment({ onClose }) {
 
           <Button
             type="button"
-            onClick={() => {
-              alert("Student search");
+                       onClick={() => {
+              if (!form.searchStudent.trim()) {
+                alert("Type a student name or admission no. in Search Student first.");
+                return;
+              }
+
+              setSearchTick((n) => n + 1);
             }}
             icon={Search}
           >
@@ -1997,5 +2047,104 @@ export default function TransportAllotment({ onClose }) {
         </div>
       </div>
     </form>
+  );
+}
+/* =========================================================
+   LIVE STUDENT SEARCH (runs 0.35s after typing stops)
+========================================================= */
+
+function useRecordSearch(type, value, refreshKey) {
+  const [results, setResults] = useState([]);
+  const [state, setState] = useState("idle"); // idle | loading | done | empty | error
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const term = value.trim();
+
+    if (!term) {
+      setResults([]);
+      setState("idle");
+      return undefined;
+    }
+
+    let cancelled = false;
+    setState("loading");
+    setError("");
+
+    const timer = setTimeout(async () => {
+      try {
+        const result = await searchRecords(type, "", term, "Active");
+        if (cancelled) return;
+
+        const rows = result?.data || [];
+        setResults(rows);
+        setState(rows.length ? "done" : "empty");
+      } catch (err) {
+        if (!cancelled) {
+          setResults([]);
+          setError(err.message || "Unable to search.");
+          setState("error");
+        }
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [type, value, refreshKey]);
+
+  return { results, state, error };
+}
+
+/* =========================================================
+   SEARCH RESULT LIST
+========================================================= */
+
+function SearchList({ search, onPick }) {
+  if (search.state !== "done") {
+    const text =
+      search.state === "loading"
+        ? "Searching..."
+        : search.state === "empty"
+        ? "No student found."
+        : search.state === "error"
+        ? search.error
+        : "Type to search students";
+
+    return (
+      <p className="px-1 py-1 text-[9px] font-semibold text-[#173b5c]/70">
+        {text}
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {search.results.map((row) => (
+        <button
+          type="button"
+          key={row.id}
+          onClick={() => onPick(row)}
+          className="w-full rounded-md border border-[#79a9c9] bg-white px-2 py-1 text-left transition-all hover:border-[#0b5fa5] hover:bg-[#eef6fb]"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-[10px] font-bold text-[#173b5c]">
+              {row.name || row.form_data?.name || "-"}
+            </span>
+
+            <span className="shrink-0 rounded-md bg-[#174f7b] px-1.5 py-0.5 text-[8px] font-bold text-[#ffd75a]">
+              {row.admission_no || row.record_no}
+            </span>
+          </div>
+
+          <div className="mt-0.5 truncate text-[9px] text-[#173b5c]/70">
+            {`Class: ${row.class_name || "-"}${
+              row.section ? " - " + row.section : ""
+            }  |  Father: ${row.form_data?.fatherName || "-"}`}
+          </div>
+        </button>
+      ))}
+    </div>
   );
 }

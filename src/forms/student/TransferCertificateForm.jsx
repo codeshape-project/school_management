@@ -830,8 +830,8 @@
 // }
 
 
-import { saveForm } from "../../api/formApi";
-import { useState } from "react";
+import { saveForm, searchRecords } from "../../api/formApi";
+import { useRef, useState } from "react";
 
 import {
   FileCheck,
@@ -842,7 +842,77 @@ import {
 } from "lucide-react";
 
 export default function TransferCertificateForm({ onClose }) {
-  const [saved, setSaved] = useState(false);
+   const [saved, setSaved] = useState(false);
+  const formRef = useRef(null);
+
+  /* ---------- search student ---------- */
+  const [searchBy, setSearchBy] = useState("admissionNo");
+  const [searchValue, setSearchValue] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchState, setSearchState] = useState("idle");
+    const [searchError, setSearchError] = useState(""); // idle | loading | done | empty | error
+
+    async function runSearch() {
+    const term = searchValue.trim();
+
+    if (!term) {
+      setSearchResults([]);
+      setSearchState("idle");
+      return;
+    }
+
+    setSearchState("loading");
+    setSearchError("");
+
+    try {
+      const result = await searchRecords("student", searchBy, term, "All");
+      const rows = result?.data || [];
+
+      setSearchResults(rows);
+      setSearchState(rows.length ? "done" : "empty");
+    } catch (err) {
+      console.error("TC search error:", err);
+      setSearchResults([]);
+      setSearchError(err.message || "Unable to search.");
+      setSearchState("error");
+    }
+  }
+
+  // put values into the form fields (fields are matched by their name)
+  function fillForm(values) {
+    const formEl = formRef.current;
+    if (!formEl) return;
+
+    Object.entries(values).forEach(([name, value]) => {
+      const el = formEl.elements[name];
+
+      if (!el || el instanceof RadioNodeList) return;
+      if (value === undefined || value === null || value === "") return;
+
+      el.value = String(value);
+    });
+  }
+
+  function pickStudent(row) {
+    const data = row.form_data || {};
+
+    fillForm({
+      admissionNo: row.admission_no || data.admissionNo,
+      session: data.session,
+      studentName: row.name || data.name,
+      fatherName: data.fatherName,
+      motherName: data.motherName,
+      dateOfBirth: data.dateOfBirth,
+      className: row.class_name || data.className,
+      category: data.category,
+      dateOfAdmission: data.dateOfAdmission,
+      admissionInClass: data.admissionInClass,
+    });
+
+    setSearchValue("");
+    setSearchResults([]);
+    setSearchState("idle");
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -854,12 +924,21 @@ export default function TransferCertificateForm({ onClose }) {
 
     try {
       // Save all named form fields to backend
-      await saveForm("transferCertificate", form);
+            const data = Object.fromEntries(new FormData(form).entries());
+
+      // search box values are not part of the certificate data
+      delete data.searchType;
+      delete data.searchValue;
+
+      await saveForm("transferCertificate", data);
 
       // Clear the complete form only AFTER successful save
       form.reset();
 
       // Show success message
+            setSearchValue("");
+      setSearchResults([]);
+      setSearchState("idle");
       setSaved(true);
 
       setTimeout(() => {
@@ -875,7 +954,8 @@ export default function TransferCertificateForm({ onClose }) {
   }
 
   return (
-    <form
+        <form
+      ref={formRef}
       onSubmit={submit}
       className="
         flex
@@ -1422,6 +1502,7 @@ export default function TransferCertificateForm({ onClose }) {
         </section>
 
         {/* SEARCH */}
+               {/* SEARCH */}
         <section
           className="
             mt-2
@@ -1450,7 +1531,8 @@ export default function TransferCertificateForm({ onClose }) {
               <select
                 name="searchType"
                 className={inputClass}
-                defaultValue="admissionNo"
+                value={searchBy}
+                onChange={(e) => setSearchBy(e.target.value)}
               >
                 <option value="admissionNo">
                   Admission No.
@@ -1467,11 +1549,20 @@ export default function TransferCertificateForm({ onClose }) {
                 name="searchValue"
                 className={inputClass}
                 placeholder="Search..."
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    runSearch();
+                  }
+                }}
               />
             </div>
 
             <button
               type="button"
+              onClick={runSearch}
               className="
                 flex
                 h-9
@@ -1495,9 +1586,46 @@ export default function TransferCertificateForm({ onClose }) {
               "
             >
               <Search size={14} strokeWidth={2.5} />
-              Search
+              {searchState === "loading" ? "Searching..." : "Search"}
             </button>
           </div>
+
+          {searchState === "done" && (
+            <div className="mt-2 max-h-[140px] space-y-1 overflow-y-auto rounded-md border border-[#a2b9c8] bg-[#edf4f8] p-1">
+              {searchResults.map((row) => (
+                <button
+                  type="button"
+                  key={row.id}
+                  onClick={() => pickStudent(row)}
+                  className="w-full rounded-md border border-[#79a9c9] bg-white px-2 py-1 text-left transition-all hover:border-[#0b5fa5] hover:bg-[#eef6fb]"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-[10px] font-bold text-[#173b5c]">
+                      {row.name || row.form_data?.name || "-"}
+                    </span>
+
+                    <span className="shrink-0 rounded-md bg-[#174f7b] px-1.5 py-0.5 text-[8px] font-bold text-[#ffd75a]">
+                      {row.admission_no || row.record_no}
+                    </span>
+                  </div>
+
+                  <div className="mt-0.5 truncate text-[9px] text-[#173b5c]/70">
+                    {`Father: ${row.form_data?.fatherName || "-"}  |  Class: ${
+                      row.class_name || "-"
+                    }`}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {(searchState === "empty" || searchState === "error") && (
+            <p className="mt-1.5 px-1 text-[10px] font-semibold text-[#173b5c]/70">
+               {searchState === "empty"
+                ? "No student found."
+                : searchError || "Unable to search."}
+            </p>
+          )}
         </section>
       </div>
 

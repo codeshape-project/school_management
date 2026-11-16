@@ -1256,16 +1256,18 @@
 // }
 
 
-import { saveForm, uploadStudentPhoto } from "../../api/formApi";
-import { useRef, useState } from "react";
+import {
+  saveForm,
+  uploadStudentPhoto,
+  searchRecords,
+} from "../../api/formApi";
+import { useEffect, useRef, useState } from "react";
 
 import {
   UserPlus,
   Search,
   Save,
   X,
-  Pencil,
-  Plus,
   Upload,
   RefreshCw,
   Camera,
@@ -1278,6 +1280,51 @@ export default function StudentAdmissionForm({ onClose }) {
   const [photoFile, setPhotoFile] = useState(null);
 
   const fileInputRef = useRef(null);
+  const formRef = useRef(null);
+
+  /* ---------- search student ---------- */
+  const [studentFilter, setStudentFilter] = useState("Active");
+  const [studentBy, setStudentBy] = useState("name");
+  const [studentValue, setStudentValue] = useState("");
+  const studentSearch = useRecordSearch(
+    "admission",
+    studentBy,
+    studentValue,
+    studentFilter
+  );
+
+  // put saved student data into the form fields (matched by field name)
+  const fillForm = (values) => {
+    const formEl = formRef.current;
+    if (!formEl) return;
+
+    Object.entries(values).forEach(([name, value]) => {
+      const el = formEl.elements[name];
+
+      if (!el || el instanceof RadioNodeList) return;
+      if (value === undefined || value === null) return;
+
+      if (el.type === "checkbox") {
+        el.checked = String(value) === "true";
+      } else if (el.type !== "file") {
+        el.value = String(value);
+      }
+    });
+  };
+
+  const pickStudent = (row) => {
+    const data = { ...(row.form_data || {}) };
+
+    SEARCH_KEYS.forEach((key) => delete data[key]);
+
+    fillForm({
+      ...data,
+      name: data.name || row.name,
+      admissionNo: data.admissionNo || row.admission_no,
+    });
+
+    setStudentValue("");
+  };
 
   // =====================================================
   // SUBMIT FORM
@@ -1291,7 +1338,12 @@ const submit = async (e) => {
 
   try {
     // Save student admission data
-    const result = await saveForm("admission", form);
+    const data = Object.fromEntries(new FormData(form).entries());
+
+    // search box values are not part of the student data
+    SEARCH_KEYS.forEach((key) => delete data[key]);
+
+    const result = await saveForm("admission", data);
 
     const studentId =
       result?.data?.id ||
@@ -1330,6 +1382,7 @@ const submit = async (e) => {
 
     setPhoto(null);
     setPhotoFile(null);
+       setStudentValue("");
 
     // Clear file input
     if (fileInputRef.current) {
@@ -1393,7 +1446,8 @@ const submit = async (e) => {
   };
 
   return (
-    <form
+        <form
+      ref={formRef}
       onSubmit={submit}
       className="
         flex
@@ -2175,6 +2229,8 @@ const submit = async (e) => {
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   name="studentStatus"
+                  value={studentFilter}
+                  onChange={(e) => setStudentFilter(e.target.value)}
                   className="
                     h-7
                     rounded-md
@@ -2196,17 +2252,19 @@ const submit = async (e) => {
                   <option value="All">All</option>
                 </select>
 
-                <RadioOption
+                                <RadioOption
                   label="By Name"
                   name="studentSearch"
                   value="name"
                   defaultChecked
+                  onChange={() => setStudentBy("name")}
                 />
 
                 <RadioOption
                   label="By Contact"
                   name="studentSearch"
                   value="contact"
+                  onChange={() => setStudentBy("contact")}
                 />
               </div>
 
@@ -2225,6 +2283,9 @@ const submit = async (e) => {
                 <input
                   name="studentSearchValue"
                   type="text"
+                  value={studentValue}
+                  onChange={(e) => setStudentValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
                   placeholder="Search student..."
                   className="
                     h-7
@@ -2246,16 +2307,23 @@ const submit = async (e) => {
                 />
               </div>
 
-              <div
+                           <div
                 className="
                   mt-1.5
                   h-[105px]
+                  overflow-y-auto
                   rounded-md
                   border
                   border-[#a2b9c8]
                   bg-[#edf4f8]
+                  p-1
                 "
-              />
+              >
+                <SearchList
+                  search={studentSearch}
+                  onPick={pickStudent}
+                />
+              </div>
             </section>
 
             {/* =================================================
@@ -2489,7 +2557,7 @@ const submit = async (e) => {
             sm:justify-start
           "
         >
-          <ActionButton
+                    {/* <ActionButton
             type="button"
             icon={
               <Search
@@ -2498,9 +2566,9 @@ const submit = async (e) => {
               />
             }
             label="Find Student"
-          />
+          /> */}
 
-          <ActionButton
+          {/* <ActionButton
             type="button"
             icon={
               <Plus
@@ -2509,7 +2577,7 @@ const submit = async (e) => {
               />
             }
             label="New"
-          />
+          /> */}
 
           <ActionButton
             type="submit"
@@ -2523,7 +2591,7 @@ const submit = async (e) => {
             green
           />
 
-          <ActionButton
+          {/* <ActionButton
             type="button"
             icon={
               <Pencil
@@ -2532,7 +2600,7 @@ const submit = async (e) => {
               />
             }
             label="Modify"
-          />
+          /> */}
 
           <ActionButton
             type="button"
@@ -2759,8 +2827,9 @@ function AddressSection({
 function RadioOption({
   label,
   name,
-  value,
+    value,
   defaultChecked = false,
+  onChange,
 }) {
   return (
     <label className="flex items-center gap-1.5">
@@ -2769,6 +2838,7 @@ function RadioOption({
         name={name}
         value={value}
         defaultChecked={defaultChecked}
+        onChange={onChange}
         className="h-3.5 w-3.5 accent-[#174f7b]"
       />
 
@@ -2811,6 +2881,112 @@ function SmallTab({
   );
 }
 
+/* =========================================================
+   LIVE STUDENT SEARCH (runs 0.35s after typing stops)
+========================================================= */
+
+// search box values that must not be saved with the student
+const SEARCH_KEYS = [
+  "studentStatus",
+  "studentSearch",
+  "studentSearchValue",
+];
+
+function useRecordSearch(type, by, value, status) {
+  const [results, setResults] = useState([]);
+  const [state, setState] = useState("idle"); // idle | loading | done | empty | error
+
+  useEffect(() => {
+    const term = value.trim();
+
+    if (!term) {
+      setResults([]);
+      setState("idle");
+      return undefined;
+    }
+
+    let cancelled = false;
+    setState("loading");
+
+    const timer = setTimeout(async () => {
+      try {
+        const result = await searchRecords(type, by, term, status);
+        if (cancelled) return;
+
+        const rows = result?.data || [];
+        setResults(rows);
+        setState(rows.length ? "done" : "empty");
+      } catch {
+        if (!cancelled) {
+          setResults([]);
+          setState("error");
+        }
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [type, by, value, status]);
+
+  return { results, state };
+}
+
+/* =========================================================
+   SEARCH RESULT LIST
+========================================================= */
+
+function SearchList({ search, onPick }) {
+  if (search.state !== "done") {
+    const text =
+      search.state === "loading"
+        ? "Searching..."
+        : search.state === "empty"
+        ? "No student found."
+        : search.state === "error"
+        ? "Unable to search."
+        : "Type a name or contact no. to search";
+
+    return (
+      <p className="px-1 py-1 text-[9px] font-semibold text-[#173b5c]/70">
+        {text}
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {search.results.map((row) => (
+        <button
+          type="button"
+          key={row.id}
+          onClick={() => onPick(row)}
+          className="w-full rounded-md border border-[#79a9c9] bg-white px-2 py-1 text-left transition-all hover:border-[#0b5fa5] hover:bg-[#eef6fb]"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-[10px] font-bold text-[#173b5c]">
+              {row.name || row.form_data?.name || "-"}
+            </span>
+
+            <span className="shrink-0 rounded-md bg-[#174f7b] px-1.5 py-0.5 text-[8px] font-bold text-[#ffd75a]">
+              {row.admission_no || row.record_no}
+            </span>
+          </div>
+
+          <div className="mt-0.5 truncate text-[9px] text-[#173b5c]/70">
+            {`Class: ${row.class_name || "-"}  |  Contact: ${
+              row.phone ||
+              row.form_data?.presentContactNo ||
+              row.form_data?.permanentContactNo ||
+              "-"
+            }`}
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+}
 /* =========================================================
    ACTION BUTTON
 ========================================================= */

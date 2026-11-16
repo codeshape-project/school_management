@@ -1088,8 +1088,11 @@
 // }
 
 
-import { saveForm } from "../../api/formApi";
-import { useState } from "react";
+import { saveForm, searchRecords } from "../../api/formApi";
+import FeeReceiptPreview from "../../components/FeeReceiptPreview";
+import { buildReceiptData } from "../../utils/feeReceipt";
+import { useEffect, useState } from "react";
+
 import {
   Search,
   Printer,
@@ -1108,7 +1111,9 @@ const initialForm = {
   name: "",
   fatherName: "",
   className: "",
-  section: "",
+    section: "",
+  rollNo: "",
+  category: "",
   siblings: "",
   paidMonths: "",
   payFor: "",
@@ -1132,8 +1137,77 @@ const initialForm = {
 
 export default function FeeReceiptForm({ onClose }) {
   const [saved, setSaved] = useState(false);
-  const [form, setForm] = useState(initialForm);
+    const [form, setForm] = useState(initialForm);
 
+  // fee receipt slip (shown after payment is saved, or from the Print button)
+  const [slip, setSlip] = useState(null);
+  const [lastSlip, setLastSlip] = useState(null);
+
+  /* ---------- search student ---------- */
+  const [showTick, setShowTick] = useState(0);
+
+  const searchClassValue =
+    form.searchClass === "ALL" ? "" : form.searchClass;
+  const searchSectionValue =
+    form.searchSection === "ALL" ? "" : form.searchSection;
+
+  const studentSearch = useStudentSearch(
+    form.searchStudent,
+    searchClassValue,
+    searchSectionValue,
+    showTick
+  );
+
+  // fill the receipt form from the selected student
+  function pickStudent(row) {
+    const d = row.form_data || {};
+
+    // this form's class list is Nursery, LKG, UKG, 1, 2, 3 ... (no "Class " prefix)
+    const rawClass = String(row.class_name || d.className || "");
+    const className = /^select/i.test(rawClass)
+      ? ""
+      : rawClass.replace(/^class\s*/i, "");
+
+    setForm((prev) => ({
+      ...prev,
+      admissionNo: row.admission_no || d.admissionNo || prev.admissionNo,
+      computerId: d.computerId || prev.computerId,
+      name: row.name || d.name || prev.name,
+      fatherName: d.fatherName || prev.fatherName,
+      className: className || prev.className,
+      section: row.section || d.section || prev.section,
+      rollNo: d.classRollNo || d.rollNo || prev.rollNo,
+      category: d.category || prev.category,
+      searchStudent: "",
+    }));
+  }
+
+  // keep "Mode" and the payment type radio the same value
+  function handleModeChange(e) {
+    const value = e.target.value;
+
+    setForm((prev) => ({
+      ...prev,
+      mode: value,
+      paymentType:
+        value === "Cheque" || value === "Net Banking"
+          ? value
+          : value
+          ? ""
+          : prev.paymentType,
+    }));
+  }
+
+  function handlePaymentTypeChange(e) {
+    const value = e.target.value;
+
+    setForm((prev) => ({
+      ...prev,
+      paymentType: value,
+      mode:
+        value === "Cheque" || value === "Net Banking" ? value : prev.mode,
+    }));
+  }
   function handleChange(e) {
     const { name, value, type, checked } = e.target;
 
@@ -1163,10 +1237,27 @@ export default function FeeReceiptForm({ onClose }) {
     const formElement = e.currentTarget;
 
     try {
-      await saveForm("receipt", formElement);
+                 const data = Object.fromEntries(new FormData(formElement).entries());
+
+      // search box values are not part of the receipt
+      delete data.searchClass;
+      delete data.searchSection;
+      delete data.searchStudent;
+
+      // one payment mode, stored in the database and printed on the slip
+      data.paymentMode = form.mode || form.paymentType || "";
+      data.category = form.category || "";
+
+      const result = await saveForm("receipt", data);
+
+      // build the receipt slip from the values paid, before the form is cleared
+      const slipData = buildReceiptData(form, result?.data?.record_no || "");
 
       // Clear React-controlled fields after successful DB save
       resetForm();
+
+      setLastSlip(slipData);
+      setSlip(slipData);
 
       setSaved(true);
 
@@ -1499,7 +1590,7 @@ export default function FeeReceiptForm({ onClose }) {
               grid-cols-1
               gap-2
               sm:grid-cols-2
-              lg:grid-cols-4
+              lg:grid-cols-5
             "
           >
             <div>
@@ -1554,8 +1645,19 @@ export default function FeeReceiptForm({ onClose }) {
                 <option>A</option>
                 <option>B</option>
                 <option>C</option>
-                <option>D</option>
+                               <option>D</option>
               </select>
+            </div>
+
+            <div>
+              <label className={labelClass}>Roll No</label>
+
+              <input
+                name="rollNo"
+                value={form.rollNo}
+                onChange={handleChange}
+                className={inputClass}
+              />
             </div>
 
             <div>
@@ -1935,6 +2037,15 @@ export default function FeeReceiptForm({ onClose }) {
                     <option>1</option>
                     <option>2</option>
                     <option>3</option>
+                    <option>4</option>
+                    <option>5</option>
+                    <option>6</option>
+                    <option>7</option>
+                    <option>8</option>
+                    <option>9</option>
+                    <option>10</option>
+                    <option>11</option>
+                    <option>12</option>
                   </select>
                 </div>
 
@@ -1958,7 +2069,14 @@ export default function FeeReceiptForm({ onClose }) {
 
                 <button
                   type="button"
-                  onClick={() => alert("Show students")}
+                                    onClick={() => {
+                    if (!searchClassValue && !searchSectionValue && !form.searchStudent.trim()) {
+                      alert("Select a class / section or type a name to search.");
+                      return;
+                    }
+
+                    setShowTick((n) => n + 1);
+                  }}
                   className="
                     flex
                     h-7
@@ -1983,12 +2101,36 @@ export default function FeeReceiptForm({ onClose }) {
               </div>
 
               <input
-                name="searchStudent"
+                              name="searchStudent"
                 value={form.searchStudent}
                 onChange={handleChange}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    setShowTick((n) => n + 1);
+                  }
+                }}
                 placeholder="Type to search..."
                 className={`${inputClass} mt-1.5`}
               />
+
+              <div
+                className="
+                  mt-1.5
+                  h-[100px]
+                  overflow-y-auto
+                  rounded-md
+                  border
+                  border-[#a2b9c8]
+                  bg-[#edf4f8]
+                  p-1
+                "
+              >
+                <SearchList
+                  search={studentSearch}
+                  onPick={pickStudent}
+                />
+              </div>
 
               <div
                 className="
@@ -2226,8 +2368,21 @@ export default function FeeReceiptForm({ onClose }) {
 
           <Button
             type="button"
-            onClick={() => {
-              window.print();
+                       onClick={() => {
+              const hasCurrent =
+                String(form.name || "").trim() ||
+                Number(form.totalPaidAmt) > 0;
+
+              const data = hasCurrent
+                ? buildReceiptData(form, "")
+                : lastSlip;
+
+              if (!data) {
+                alert("Enter a payment or save one first to print the receipt.");
+                return;
+              }
+
+              setSlip(data);
             }}
             icon={Printer}
             blue
@@ -2245,6 +2400,118 @@ export default function FeeReceiptForm({ onClose }) {
           </Button>
         </div>
       </div>
+    
+      {slip && (
+        <FeeReceiptPreview
+          data={slip}
+          onClose={() => setSlip(null)}
+        />
+      )}
     </form>
+  );
+}
+/* =========================================================
+   LIVE STUDENT SEARCH (runs 0.35s after typing stops)
+========================================================= */
+
+function useStudentSearch(value, className, section, showTick) {
+  const [results, setResults] = useState([]);
+  const [state, setState] = useState("idle"); // idle | loading | done | empty | error
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const term = value.trim();
+    const hasFilter = Boolean(className || section);
+
+    // typing searches by itself; class / section list needs the Show button
+    if (!term && !(showTick > 0 && hasFilter)) {
+      setResults([]);
+      setState("idle");
+      return undefined;
+    }
+
+    let cancelled = false;
+    setState("loading");
+    setError("");
+
+    const timer = setTimeout(async () => {
+      try {
+        const result = await searchRecords("student", "", term, "Active", {
+          className,
+          section,
+          limit: 100,
+        });
+        if (cancelled) return;
+
+        const rows = result?.data || [];
+        setResults(rows);
+        setState(rows.length ? "done" : "empty");
+      } catch (err) {
+        if (!cancelled) {
+          setResults([]);
+          setError(err.message || "Unable to search.");
+          setState("error");
+        }
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [value, className, section, showTick]);
+
+  return { results, state, error };
+}
+
+/* =========================================================
+   SEARCH RESULT LIST
+========================================================= */
+
+function SearchList({ search, onPick }) {
+  if (search.state !== "done") {
+    const text =
+      search.state === "loading"
+        ? "Searching..."
+        : search.state === "empty"
+        ? "No student found."
+        : search.state === "error"
+        ? search.error
+        : "Type a name, or pick class / section and press Show";
+
+    return (
+      <p className="px-1 py-1 text-[9px] font-semibold text-[#173b5c]/70">
+        {text}
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {search.results.map((row) => (
+        <button
+          type="button"
+          key={row.id}
+          onClick={() => onPick(row)}
+          className="w-full rounded-md border border-[#79a9c9] bg-white px-2 py-1 text-left transition-all hover:border-[#0b5fa5] hover:bg-[#eef6fb]"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-[10px] font-bold text-[#173b5c]">
+              {row.name || row.form_data?.name || "-"}
+            </span>
+
+            <span className="shrink-0 rounded-md bg-[#174f7b] px-1.5 py-0.5 text-[8px] font-bold text-[#ffd75a]">
+              {row.admission_no || row.record_no}
+            </span>
+          </div>
+
+          <div className="mt-0.5 truncate text-[9px] text-[#173b5c]/70">
+            {`Class: ${row.class_name || "-"}${
+              row.section ? " - " + row.section : ""
+            }  |  Father: ${row.form_data?.fatherName || "-"}`}
+          </div>
+        </button>
+      ))}
+    </div>
   );
 }

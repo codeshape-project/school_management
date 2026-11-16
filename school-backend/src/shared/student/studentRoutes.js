@@ -8,7 +8,7 @@ import { ok, fail } from '../../utils/response.js';
 import { uploadStudentPhoto } from '../../middleware/uploadMiddleware.js';
 import { query } from '../../config/db.js';
 
-import { save, list } from './student.js';
+import { save, list, search } from './student.js';
 
 const router = Router();
 
@@ -77,6 +77,13 @@ router.post(
 router.get('/', async (req, res, next) => {
   try {
     return ok(res, await list(req.query));
+  } catch (e) {
+    next(e);
+  }
+});
+router.get('/search', async (req, res, next) => {
+  try {
+    return ok(res, await search(req.query));
   } catch (e) {
     next(e);
   }

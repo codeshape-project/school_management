@@ -2,39 +2,77 @@ import { query } from '../config/db.js';
 import { generateNumber } from '../utils/generateNumber.js';
 
 /* Search saved records by one field (used by the search box on forms) */
+/* Search saved records by one field (used by the search box on forms) */
 const SEARCH_EXPR = {
   name: 'name',
+  studentName: 'name',
+  formNo: "(COALESCE(form_data->>'formNo', '') || ' ' || record_no)",
   mobile: 'phone',
   phone: 'phone',
+  contact:
+    "(COALESCE(phone, '') || ' ' || COALESCE(form_data->>'contactNo', '') || ' ' || COALESCE(form_data->>'presentContactNo', '') || ' ' || COALESCE(form_data->>'permanentContactNo', ''))",
   admissionNo: 'admission_no',
   fatherName: "form_data->>'fatherName'",
   motherName: "form_data->>'motherName'",
   enquiredBy: "form_data->>'enquiredBy'",
-    studentName: 'name',
-  formNo: "(COALESCE(form_data->>'formNo', '') || ' ' || record_no)",
 };
 
-export async function searchRecords(type, { by, q, limit } = {}) {
+export async function searchRecords(type, { by, q, limit, status, className, section } = {}) {
   const table = TABLE_MAP[type];
   if (!table) throw Object.assign(new Error(`Unknown form type: ${type}`), { status: 400 });
 
   const term = String(q || '').trim();
-  if (!term) return [];
+  const classFilter = String(className || '').trim();
+  const sectionFilter = String(section || '').trim();
 
-  const expr = SEARCH_EXPR[by];
-  const where = expr
-    ? `${expr} ILIKE $1`
-    : `(name ILIKE $1 OR phone ILIKE $1 OR admission_no ILIKE $1 OR form_data::text ILIKE $1)`;
+  // nothing to search for
+  if (!term && !classFilter && !sectionFilter) return [];
+
+  const conditions = [];
+  const params = [];
+
+  if (term) {
+    params.push(`%${term}%`);
+    const expr = SEARCH_EXPR[by];
+    conditions.push(
+      expr
+        ? `${expr} ILIKE $${params.length}`
+        : `(name ILIKE $${params.length} OR phone ILIKE $${params.length} OR admission_no ILIKE $${params.length} OR form_data::text ILIKE $${params.length})`
+    );
+  }
+
+  // class "5" also matches "Class 5"
+  if (classFilter && classFilter.toUpperCase() !== 'ALL') {
+    params.push(classFilter);
+    conditions.push(
+      `(LOWER(class_name) = LOWER($${params.length}::text) OR LOWER(class_name) = LOWER('Class ' || $${params.length}::text))`
+    );
+  }
+
+  if (sectionFilter && sectionFilter.toUpperCase() !== 'ALL') {
+    params.push(sectionFilter);
+    conditions.push(`LOWER(section) = LOWER($${params.length})`);
+  }
+
+  // Active / Inactive / All
+  const wantedStatus = String(status || '').trim();
+  if (wantedStatus && wantedStatus.toLowerCase() !== 'all') {
+    params.push(wantedStatus);
+    conditions.push(`LOWER(status) = LOWER($${params.length})`);
+  }
+
+  if (!conditions.length) return [];
 
   const max = Math.min(Math.max(Number(limit) || 50, 1), 200);
+  const order = term ? 'created_at DESC' : 'LOWER(name) ASC';
 
   const result = await query(
     `SELECT id, record_no, name, class_name, section, phone, admission_no, status, created_at, form_data
        FROM ${table}
-      WHERE ${where}
-      ORDER BY created_at DESC
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY ${order}
       LIMIT ${max}`,
-    [`%${term}%`]
+    params
   );
   return result.rows;
 }
@@ -52,7 +90,7 @@ const COMMON_ALIASES = {
   session: ['session','academicSession'], className: ['className','class','admissionClass'], section: ['section'],
   name: ['name','studentName'], phone: ['phone','mobile','contactNo','contact'], admissionNo: ['admissionNo','admissionNumber'],
   status: ['status'], date: ['date','formDate','recDate','admissionDate','dateOfAdmission','asOnDate'],
-  paymentMode: ['mode','payMode','paymentType'], vehicleNo: ['vehicleNo','vehicle'], route: ['route','routeName']
+    paymentMode: ['paymentMode','mode','payMode','paymentType'], vehicleNo: ['vehicleNo','vehicle'], route: ['route','routeName']
 };
 
 function pick(data, aliases) {

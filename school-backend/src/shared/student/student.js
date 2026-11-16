@@ -1,1 +1,1 @@
-export { save, list } from '../../features/student/admission/admission.js';
+export { save, list, search } from '../../features/student/admission/admission.js';
