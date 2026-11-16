@@ -1,5 +1,6 @@
-// import { saveForm } from "../../api/formApi";
-// import { useState } from "react";
+
+// import { saveForm, searchRecords } from "../../api/formApi";
+// import { useEffect, useState } from "react";
 // import {
 //   Search,
 //   Printer,
@@ -22,6 +23,19 @@
 //   "February",
 //   "March",
 // ];
+
+// const createRows = () =>
+//   MONTHS.map((month) => ({
+//     month,
+//     checked: false,
+//     pickup: "",
+//     vehicleNo: "",
+//     amount: "",
+//     conc: "",
+//     payAmt: "",
+//     returnVehicleNo: "",
+//     seatNo: "",
+//   }));
 
 // export default function TransportAllotment({ onClose }) {
 //   const [saved, setSaved] = useState(false);
@@ -47,20 +61,39 @@
 //     searchStudent: "",
 //   });
 
-//   const [rows, setRows] = useState(
-//     MONTHS.map((month) => ({
-//       month,
-//       checked: false,
-//       pickup: "",
-//       vehicleNo: "",
-//       amount: "",
-//       conc: "",
-//       payAmt: "",
-//       returnVehicleNo: "",
-//       seatNo: "",
-//     }))
+//   const [rows, setRows] = useState(createRows());
+//   /* ---------- search student ---------- */
+//   const [searchTick, setSearchTick] = useState(0);
+//   const studentSearch = useRecordSearch(
+//     "student",
+//     form.searchStudent,
+//     searchTick
 //   );
 
+//   // fill the allotment form from the selected student
+//   function pickStudent(row) {
+//     const d = row.form_data || {};
+
+//     // this form's class list is Nursery, LKG, UKG, 1, 2, 3 ... (no "Class " prefix)
+//     const rawClass = String(row.class_name || d.className || "");
+//     const className = /^select/i.test(rawClass)
+//       ? ""
+//       : rawClass.replace(/^class\s*/i, "");
+
+//     setForm((prev) => ({
+//       ...prev,
+//       admissionNo: row.admission_no || d.admissionNo || prev.admissionNo,
+//       computerId: d.computerId || prev.computerId,
+//       name: row.name || d.name || prev.name,
+//       className: className || prev.className,
+//       section: row.section || d.section || prev.section,
+//       fatherName: d.fatherName || prev.fatherName,
+//       address: d.presentAddress || d.address || prev.address,
+//       searchStudent: "",
+//     }));
+
+//     setSaved(false);
+//   }
 //   function handleChange(e) {
 //     const { name, value } = e.target;
 
@@ -68,6 +101,8 @@
 //       ...prev,
 //       [name]: value,
 //     }));
+
+//     setSaved(false);
 //   }
 
 //   function handleRowChange(index, field, value) {
@@ -76,40 +111,75 @@
 //         i === index ? { ...row, [field]: value } : row
 //       )
 //     );
+
+//     setSaved(false);
 //   }
 
 //   async function submit(e) {
 //     e.preventDefault();
 
 //     try {
-//       await saveForm("transportAllotment", e.currentTarget);
+//       const formData = new FormData(e.currentTarget);
+//       const data = {};
+
+//       for (const [key, value] of formData.entries()) {
+//         data[key] = value;
+//       }
+
+//       // Add month-wise transport allotment rows
+//       data.rows = rows;
+//       delete data.searchStudent;
+
+//       await saveForm("transportAllotment", createFakeForm(data));
+
 //       setSaved(true);
 
-//     setTimeout(() => {
-//       setSaved(false);
-//     }, 2200);
+//       setTimeout(() => {
+//         setSaved(false);
+//       }, 2200);
 //     } catch (err) {
+//       setSaved(false);
 //       alert(err.message || "Unable to save data.");
 //     }
 //   }
 
-//  const inputClass = `
-//   h-7
-//   w-full
-//   rounded-md
-//   border
-//   border-[#0b2a52]
-//   bg-white
-//   px-2
-//   text-[11px]
-//   font-semibold
-//   text-slate-800
-//   outline-none
-//   transition
-//   focus:border-[#061a3a]
-//   focus:ring-1
-//   focus:ring-[#0b2a52]/30
-// `;
+//   function createFakeForm(data) {
+//     const fakeForm = document.createElement("form");
+
+//     Object.entries(data).forEach(([key, value]) => {
+//       const input = document.createElement("input");
+
+//       input.name = key;
+
+//       if (typeof value === "string") {
+//         input.value = value;
+//       } else {
+//         input.value = JSON.stringify(value);
+//       }
+
+//       fakeForm.appendChild(input);
+//     });
+
+//     return fakeForm;
+//   }
+
+//   const inputClass = `
+//     h-7
+//     w-full
+//     rounded-md
+//     border
+//     border-[#0b2a52]
+//     bg-white
+//     px-2
+//     text-[11px]
+//     font-semibold
+//     text-slate-800
+//     outline-none
+//     transition
+//     focus:border-[#061a3a]
+//     focus:ring-1
+//     focus:ring-[#0b2a52]/30
+//   `;
 
 //   const selectClass = inputClass;
 
@@ -185,20 +255,20 @@
 //     <form
 //       onSubmit={submit}
 //       className="
-//   flex
-//   h-auto
-//   max-h-[calc(100vh-72px)]
-//   w-full
-//   max-w-[1180px]
-//   flex-col
-//   overflow-hidden
-//   rounded-[22px]
-//   border-2
-//   border-[#0b2a52]
-//   bg-[#dbe9f4]
-//   p-2.5
-//   shadow-[0_0_18px_rgba(11,42,82,0.30)]
-// "
+//         flex
+//         h-auto
+//         max-h-[calc(100vh-72px)]
+//         w-full
+//         max-w-[1180px]
+//         flex-col
+//         overflow-hidden
+//         rounded-[22px]
+//         border-2
+//         border-[#0b2a52]
+//         bg-[#dbe9f4]
+//         p-2.5
+//         shadow-[0_0_18px_rgba(11,42,82,0.30)]
+//       "
 //     >
 //       {/* HEADER */}
 //       <div
@@ -302,7 +372,7 @@
 //           lg:overflow-y-auto
 //         "
 //       >
-//         {/* MAIN LAYOUT: STUDENT DETAILS + SEARCH */}
+//         {/* MAIN LAYOUT */}
 //         <div
 //           className="
 //             grid
@@ -356,7 +426,6 @@
 //             >
 //               <div>
 //                 <label className={labelClass}>Session</label>
-
 //                 <select
 //                   name="session"
 //                   value={form.session}
@@ -371,7 +440,6 @@
 
 //               <div>
 //                 <label className={labelClass}>Computer ID</label>
-
 //                 <input
 //                   name="computerId"
 //                   value={form.computerId}
@@ -382,7 +450,6 @@
 
 //               <div>
 //                 <label className={labelClass}>Adm No</label>
-
 //                 <input
 //                   name="admissionNo"
 //                   value={form.admissionNo}
@@ -393,9 +460,9 @@
 
 //               <div>
 //                 <label className={labelClass}>Date</label>
-
 //                 <input
 //                   type="date"
+//                   name="date"
 //                   className={inputClass}
 //                   value={
 //                     form.date
@@ -411,13 +478,14 @@
 //                         date: `${parts[2]}-${parts[1]}-${parts[0]}`,
 //                       }));
 //                     }
+
+//                     setSaved(false);
 //                   }}
 //                 />
 //               </div>
 
 //               <div>
 //                 <label className={labelClass}>Name</label>
-
 //                 <input
 //                   name="name"
 //                   value={form.name}
@@ -439,7 +507,6 @@
 //             >
 //               <div>
 //                 <label className={labelClass}>Class</label>
-
 //                 <select
 //                   name="className"
 //                   value={form.className}
@@ -467,7 +534,6 @@
 
 //               <div>
 //                 <label className={labelClass}>Section</label>
-
 //                 <select
 //                   name="section"
 //                   value={form.section}
@@ -484,7 +550,6 @@
 
 //               <div>
 //                 <label className={labelClass}>Father's Name</label>
-
 //                 <input
 //                   name="fatherName"
 //                   value={form.fatherName}
@@ -495,7 +560,6 @@
 
 //               <div>
 //                 <label className={labelClass}>Siblings</label>
-
 //                 <input
 //                   name="siblings"
 //                   value={form.siblings}
@@ -507,7 +571,6 @@
 
 //             <div className="mt-2">
 //               <label className={labelClass}>Address</label>
-
 //               <input
 //                 name="address"
 //                 value={form.address}
@@ -544,11 +607,17 @@
 //               Search Student
 //             </div>
 
-//             <input
+//                        <input
 //               name="searchStudent"
 //               value={form.searchStudent}
 //               onChange={handleChange}
-//               placeholder="Type to search..."
+//               onKeyDown={(e) => {
+//                 if (e.key === "Enter") {
+//                   e.preventDefault();
+//                   setSearchTick((n) => n + 1);
+//                 }
+//               }}
+//               placeholder="Name, admission no., father, contact..."
 //               className={inputClass}
 //             />
 
@@ -556,13 +625,20 @@
 //               className="
 //                 mt-2
 //                 h-[140px]
+//                 overflow-y-auto
 //                 rounded-md
 //                 border
 //                 border-[#a2b9c8]
 //                 bg-[#edf4f8]
+//                 p-1
 //                 lg:h-[300px]
 //               "
-//             />
+//             >
+//               <SearchList
+//                 search={studentSearch}
+//                 onPick={pickStudent}
+//               />
+//             </div>
 //           </section>
 //         </div>
 
@@ -626,28 +702,38 @@
 //                 "
 //               >
 //                 <div className="border-r border-[#7698ad] px-1 py-1" />
+
 //                 <div className="border-r border-[#7698ad] px-1.5 py-1">
 //                   Month
 //                 </div>
+
 //                 <div className="border-r border-[#7698ad] px-1.5 py-1">
 //                   Pickup Station
 //                 </div>
+
 //                 <div className="border-r border-[#7698ad] px-1.5 py-1">
 //                   Vehicle No.
 //                 </div>
+
 //                 <div className="border-r border-[#7698ad] px-1.5 py-1">
 //                   Amount
 //                 </div>
+
 //                 <div className="border-r border-[#7698ad] px-1.5 py-1">
 //                   Conc.
 //                 </div>
+
 //                 <div className="border-r border-[#7698ad] px-1.5 py-1">
 //                   Pay Amt
 //                 </div>
+
 //                 <div className="border-r border-[#7698ad] px-1.5 py-1">
 //                   Return Vehicle No.
 //                 </div>
-//                 <div className="px-1.5 py-1">Seat No.</div>
+
+//                 <div className="px-1.5 py-1">
+//                   Seat No.
+//                 </div>
 //               </div>
 
 //               {/* TABLE ROWS */}
@@ -672,7 +758,11 @@
 //                       type="checkbox"
 //                       checked={row.checked}
 //                       onChange={(e) =>
-//                         handleRowChange(index, "checked", e.target.checked)
+//                         handleRowChange(
+//                           index,
+//                           "checked",
+//                           e.target.checked
+//                         )
 //                       }
 //                       className="h-3.5 w-3.5 accent-[#174f7b]"
 //                     />
@@ -684,7 +774,11 @@
 //                     <select
 //                       value={row.pickup}
 //                       onChange={(e) =>
-//                         handleRowChange(index, "pickup", e.target.value)
+//                         handleRowChange(
+//                           index,
+//                           "pickup",
+//                           e.target.value
+//                         )
 //                       }
 //                       className={selectClass}
 //                     >
@@ -694,7 +788,11 @@
 //                     <select
 //                       value={row.vehicleNo}
 //                       onChange={(e) =>
-//                         handleRowChange(index, "vehicleNo", e.target.value)
+//                         handleRowChange(
+//                           index,
+//                           "vehicleNo",
+//                           e.target.value
+//                         )
 //                       }
 //                       className={selectClass}
 //                     >
@@ -704,7 +802,11 @@
 //                     <input
 //                       value={row.amount}
 //                       onChange={(e) =>
-//                         handleRowChange(index, "amount", e.target.value)
+//                         handleRowChange(
+//                           index,
+//                           "amount",
+//                           e.target.value
+//                         )
 //                       }
 //                       className={inputClass}
 //                     />
@@ -712,7 +814,11 @@
 //                     <input
 //                       value={row.conc}
 //                       onChange={(e) =>
-//                         handleRowChange(index, "conc", e.target.value)
+//                         handleRowChange(
+//                           index,
+//                           "conc",
+//                           e.target.value
+//                         )
 //                       }
 //                       className={inputClass}
 //                     />
@@ -720,7 +826,11 @@
 //                     <input
 //                       value={row.payAmt}
 //                       onChange={(e) =>
-//                         handleRowChange(index, "payAmt", e.target.value)
+//                         handleRowChange(
+//                           index,
+//                           "payAmt",
+//                           e.target.value
+//                         )
 //                       }
 //                       className={inputClass}
 //                     />
@@ -742,7 +852,11 @@
 //                     <select
 //                       value={row.seatNo}
 //                       onChange={(e) =>
-//                         handleRowChange(index, "seatNo", e.target.value)
+//                         handleRowChange(
+//                           index,
+//                           "seatNo",
+//                           e.target.value
+//                         )
 //                       }
 //                       className={selectClass}
 //                     >
@@ -778,7 +892,6 @@
 //           >
 //             <div>
 //               <label className={labelClass}>Capacity</label>
-
 //               <input
 //                 name="capacity"
 //                 value={form.capacity}
@@ -789,7 +902,6 @@
 
 //             <div>
 //               <label className={labelClass}>Travelling Students</label>
-
 //               <input
 //                 name="travellingStudents"
 //                 value={form.travellingStudents}
@@ -800,7 +912,6 @@
 
 //             <div>
 //               <label className={labelClass}>Total Amt</label>
-
 //               <input
 //                 name="totalAmt"
 //                 value={form.totalAmt}
@@ -811,7 +922,6 @@
 
 //             <div>
 //               <label className={labelClass}>Total Conc</label>
-
 //               <input
 //                 name="totalConc"
 //                 value={form.totalConc}
@@ -822,7 +932,6 @@
 
 //             <div>
 //               <label className={labelClass}>Total Pay</label>
-
 //               <input
 //                 name="totalPay"
 //                 value={form.totalPay}
@@ -852,9 +961,9 @@
 
 //             <div>
 //               <label className={labelClass}>From</label>
-
 //               <input
 //                 type="date"
+//                 name="validFrom"
 //                 className={inputClass}
 //                 value={
 //                   form.validFrom
@@ -870,15 +979,17 @@
 //                       validFrom: `${parts[2]}-${parts[1]}-${parts[0]}`,
 //                     }));
 //                   }
+
+//                   setSaved(false);
 //                 }}
 //               />
 //             </div>
 
 //             <div>
 //               <label className={labelClass}>To</label>
-
 //               <input
 //                 type="date"
+//                 name="validTo"
 //                 className={inputClass}
 //                 value={
 //                   form.validTo
@@ -894,6 +1005,8 @@
 //                       validTo: `${parts[2]}-${parts[1]}-${parts[0]}`,
 //                     }));
 //                   }
+
+//                   setSaved(false);
 //                 }}
 //               />
 //             </div>
@@ -933,8 +1046,13 @@
 
 //           <Button
 //             type="button"
-//             onClick={() => {
-//               alert("Student search");
+//                        onClick={() => {
+//               if (!form.searchStudent.trim()) {
+//                 alert("Type a student name or admission no. in Search Student first.");
+//                 return;
+//               }
+
+//               setSearchTick((n) => n + 1);
 //             }}
 //             icon={Search}
 //           >
@@ -964,9 +1082,108 @@
 //     </form>
 //   );
 // }
+// /* =========================================================
+//    LIVE STUDENT SEARCH (runs 0.35s after typing stops)
+// ========================================================= */
+
+// function useRecordSearch(type, value, refreshKey) {
+//   const [results, setResults] = useState([]);
+//   const [state, setState] = useState("idle"); // idle | loading | done | empty | error
+//   const [error, setError] = useState("");
+
+//   useEffect(() => {
+//     const term = value.trim();
+
+//     if (!term) {
+//       setResults([]);
+//       setState("idle");
+//       return undefined;
+//     }
+
+//     let cancelled = false;
+//     setState("loading");
+//     setError("");
+
+//     const timer = setTimeout(async () => {
+//       try {
+//         const result = await searchRecords(type, "", term, "Active");
+//         if (cancelled) return;
+
+//         const rows = result?.data || [];
+//         setResults(rows);
+//         setState(rows.length ? "done" : "empty");
+//       } catch (err) {
+//         if (!cancelled) {
+//           setResults([]);
+//           setError(err.message || "Unable to search.");
+//           setState("error");
+//         }
+//       }
+//     }, 350);
+
+//     return () => {
+//       cancelled = true;
+//       clearTimeout(timer);
+//     };
+//   }, [type, value, refreshKey]);
+
+//   return { results, state, error };
+// }
+
+// /* =========================================================
+//    SEARCH RESULT LIST
+// ========================================================= */
+
+// function SearchList({ search, onPick }) {
+//   if (search.state !== "done") {
+//     const text =
+//       search.state === "loading"
+//         ? "Searching..."
+//         : search.state === "empty"
+//         ? "No student found."
+//         : search.state === "error"
+//         ? search.error
+//         : "Type to search students";
+
+//     return (
+//       <p className="px-1 py-1 text-[9px] font-semibold text-[#173b5c]/70">
+//         {text}
+//       </p>
+//     );
+//   }
+
+//   return (
+//     <div className="space-y-1">
+//       {search.results.map((row) => (
+//         <button
+//           type="button"
+//           key={row.id}
+//           onClick={() => onPick(row)}
+//           className="w-full rounded-md border border-[#79a9c9] bg-white px-2 py-1 text-left transition-all hover:border-[#0b5fa5] hover:bg-[#eef6fb]"
+//         >
+//           <div className="flex items-center justify-between gap-2">
+//             <span className="truncate text-[10px] font-bold text-[#173b5c]">
+//               {row.name || row.form_data?.name || "-"}
+//             </span>
+
+//             <span className="shrink-0 rounded-md bg-[#174f7b] px-1.5 py-0.5 text-[8px] font-bold text-[#ffd75a]">
+//               {row.admission_no || row.record_no}
+//             </span>
+//           </div>
+
+//           <div className="mt-0.5 truncate text-[9px] text-[#173b5c]/70">
+//             {`Class: ${row.class_name || "-"}${
+//               row.section ? " - " + row.section : ""
+//             }  |  Father: ${row.form_data?.fatherName || "-"}`}
+//           </div>
+//         </button>
+//       ))}
+//     </div>
+//   );
+// }
 
 
-import { saveForm, searchRecords } from "../../api/formApi";
+import { saveForm, searchRecords, apiFetch } from "../../api/formApi";
 import { useEffect, useState } from "react";
 import {
   Search,
@@ -1029,6 +1246,54 @@ export default function TransportAllotment({ onClose }) {
   });
 
   const [rows, setRows] = useState(createRows());
+
+  // Load existing transport allotments to populate selection lists.
+  const [pickupOptions, setPickupOptions] = useState([]);
+  const [vehicleOptions, setVehicleOptions] = useState([]);
+  const [seatOptions, setSeatOptions] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTransportOptions() {
+      try {
+        const response = await apiFetch("/transport-allotments");
+        const records = Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response)
+            ? response
+            : [];
+
+        const pickups = new Set();
+        const vehicles = new Set();
+        const seats = new Set();
+
+        records.forEach((record) => {
+          const details = record?.form_data || record?.data || {};
+          const monthRows = Array.isArray(details.rows) ? details.rows : [];
+          monthRows.forEach((monthRow) => {
+            if (monthRow.pickup) pickups.add(String(monthRow.pickup));
+            if (monthRow.vehicleNo) vehicles.add(String(monthRow.vehicleNo));
+            if (monthRow.returnVehicleNo) vehicles.add(String(monthRow.returnVehicleNo));
+            if (monthRow.seatNo) seats.add(String(monthRow.seatNo));
+          });
+
+          // Also include values stored at record level.
+          if (record.vehicle_no) vehicles.add(String(record.vehicle_no));
+          if (record.route_name) pickups.add(String(record.route_name));
+        });
+
+        if (!cancelled) {
+          setPickupOptions([...pickups].sort((a, b) => a.localeCompare(b)));
+          setVehicleOptions([...vehicles].sort((a, b) => a.localeCompare(b)));
+          setSeatOptions([...seats].sort((a, b) => a.localeCompare(b)));
+        }
+      } catch (err) {
+        console.error("Could not load transport selection options:", err);
+      }
+    }
+    loadTransportOptions();
+    return () => { cancelled = true; };
+  }, []);
   /* ---------- search student ---------- */
   const [searchTick, setSearchTick] = useState(0);
   const studentSearch = useRecordSearch(
@@ -1749,7 +2014,8 @@ export default function TransportAllotment({ onClose }) {
                       }
                       className={selectClass}
                     >
-                      <option value="">Select</option>
+                      <option value="">Select Pickup</option>
+                      {pickupOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
 
                     <select
@@ -1763,7 +2029,8 @@ export default function TransportAllotment({ onClose }) {
                       }
                       className={selectClass}
                     >
-                      <option value="">Select</option>
+                      <option value="">Select Vehicle</option>
+                      {vehicleOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
 
                     <input
@@ -1813,7 +2080,8 @@ export default function TransportAllotment({ onClose }) {
                       }
                       className={selectClass}
                     >
-                      <option value="">Select</option>
+                      <option value="">Select Return Vehicle</option>
+                      {vehicleOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
 
                     <select
@@ -1827,7 +2095,8 @@ export default function TransportAllotment({ onClose }) {
                       }
                       className={selectClass}
                     >
-                      <option value="">Select</option>
+                      <option value="">Select Seat</option>
+                      {seatOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
                   </div>
                 ))}
