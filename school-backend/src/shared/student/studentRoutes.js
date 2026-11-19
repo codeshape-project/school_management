@@ -8,8 +8,7 @@ import { ok, fail } from '../../utils/response.js';
 import { uploadStudentPhoto } from '../../middleware/uploadMiddleware.js';
 import { query } from '../../config/db.js';
 
-import { save, list, search } from './student.js';
-
+import { save, list, search, getByFormNo } from './student.js';
 const router = Router();
 
 router.use(authMiddleware, adminOnly);
@@ -84,6 +83,19 @@ router.get('/', async (req, res, next) => {
 router.get('/search', async (req, res, next) => {
   try {
     return ok(res, await search(req.query));
+  } catch (e) {
+    next(e);
+  }
+});
+router.get('/by-form-no/:formNo', async (req, res, next) => {
+  try {
+    const student = await getByFormNo(req.params.formNo);
+
+    if (!student) {
+      return fail(res, 'No student found for this Admission Form Number.', 404);
+    }
+
+    return ok(res, student);
   } catch (e) {
     next(e);
   }

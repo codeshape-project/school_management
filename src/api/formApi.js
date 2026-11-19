@@ -141,7 +141,7 @@
 //   if (!endpoint) throw new Error(`Unknown form type: ${type}`);
 //   return endpoint;
 // }
-
+import { notify } from "../components/Toast";
 const API_BASE =
   import.meta.env.VITE_API_URL ||
   "http://localhost:5000/api";
@@ -228,62 +228,74 @@ export async function apiFetch(
    SAVE FORM
 ===================================================== */
 
+const SAVE_MESSAGES = {
+  admission: "Student admission saved successfully!",
+  enquiry: "Enquiry saved successfully!",
+  registration: "Registration saved successfully!",
+  transferCertificate: "Transfer certificate saved successfully!",
+  complaint: "Complaint saved successfully!",
+  feeFormat: "Fee format saved successfully!",
+  feeDues: "Fee dues saved successfully!",
+  receipt: "Fee receipt saved successfully!",
+  blankReceipt: "Blank receipt saved successfully!",
+  studentLedger: "Student ledger saved successfully!",
+  transportAllotment: "Transport allotment saved successfully!",
+  conveyanceStudent: "Conveyance student saved successfully!",
+  conveyanceAmount: "Conveyance amount saved successfully!",
+};
+
 export async function saveForm(
   type,
-  formDataOrObject
+  formDataOrObject,
+  { silent = false, message } = {}
 ) {
   let data = {};
 
   if (
-    typeof HTMLFormElement !==
-      "undefined" &&
-    formDataOrObject instanceof
-      HTMLFormElement
+    typeof HTMLFormElement !== "undefined" &&
+    formDataOrObject instanceof HTMLFormElement
   ) {
-    const formData =
-      new FormData(
-        formDataOrObject
-      );
+    const formData = new FormData(formDataOrObject);
 
-    for (const [
-      key,
-      value,
-    ] of formData.entries()) {
-      if (value instanceof File) {
-        continue;
-      }
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) continue;
 
       if (data[key] !== undefined) {
-        data[key] = Array.isArray(
-          data[key]
-        )
+        data[key] = Array.isArray(data[key])
           ? [...data[key], value]
           : [data[key], value];
       } else {
         data[key] = value;
       }
     }
-  } else if (
-    formDataOrObject &&
-    typeof formDataOrObject ===
-      "object"
-  ) {
+  } else if (formDataOrObject && typeof formDataOrObject === "object") {
     data = formDataOrObject;
   } else {
-    throw new Error(
-      "Invalid form data."
-    );
+    throw new Error("Invalid form data.");
   }
 
-  return apiFetch(
-    getFormEndpoint(type),
-    {
-      method: "POST",
-      body: JSON.stringify({
-        data,
-      }),
-    }
-  );
+  const result = await apiFetch(getFormEndpoint(type), {
+    method: "POST",
+    body: JSON.stringify({ data }),
+  });
+
+  if (!silent) {
+    notify.success(message || SAVE_MESSAGES[type] || "Saved successfully!");
+  }
+
+  return result;
+}
+
+export async function getAdmissionByFormNo(formNo) {
+  try {
+    const result = await apiFetch(
+      `/student/by-form-no/${encodeURIComponent(String(formNo).trim())}`
+    );
+    return result?.data || null;
+  } catch (error) {
+    if (error.status === 404) return null;
+    throw error;
+  }
 }
 
 /* =====================================================
