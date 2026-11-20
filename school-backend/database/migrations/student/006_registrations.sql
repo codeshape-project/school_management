@@ -8,3 +8,10 @@ CREATE TABLE IF NOT EXISTS registrations (
   created_by BIGINT REFERENCES users(id), created_at TIMESTAMPTZ DEFAULT NOW(), updated_at TIMESTAMPTZ DEFAULT NOW()
 
 );
+
+CREATE TABLE IF NOT EXISTS record_number_counters (
+    prefix VARCHAR(10) NOT NULL,
+    year INTEGER NOT NULL,
+    last_value BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (prefix, year)
+);

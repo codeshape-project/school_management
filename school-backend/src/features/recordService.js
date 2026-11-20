@@ -187,10 +187,6 @@
 import { query } from '../config/db.js';
 import { generateNumber } from '../utils/generateNumber.js';
 
-/* =========================================================
-   SEARCH RECORDS
-========================================================= */
-
 const SEARCH_EXPR = {
   name: "to_jsonb(r)->>'name'",
   studentName: "to_jsonb(r)->>'name'",
@@ -507,48 +503,71 @@ export async function createRecord(type, data, meta = {}) {
   const common = normalizeRecord(data);
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
+    let recordNo;
+    let finalData = { ...data };
 
-    const recordNo =
-      type === 'enquiry'
-        ? await nextEnquiryNo()
-        : generateNumber(
-            type === 'registration'
-              ? 'REG'
-              : type.slice(0, 4).toUpperCase()
-          );
+    if (type === "enquiry") {
+      recordNo = await nextEnquiryNo();
+    } else if (type === "registration") {
+      const year = new Date().getFullYear();
 
-    /* Generate registration identifiers on server */
+      // Generate sequential registration number
+      const regSequence = await nextSequentialValue(
+        "REG",
+        "record_no"
+      );
 
-    if (type === 'registration') {
-      data = {
+      // Generate sequential computer ID
+      const computerSequence = await nextSequentialValue(
+        "CMP",
+        "form_data->>'computerId'"
+      );
+
+      recordNo = generateNumber(
+        "REG",
+        year,
+        regSequence
+      );
+
+      finalData = {
         ...data,
-        formNo: data.formNo || recordNo,
-        computerId: data.computerId || generateNumber('CMP')
+        formNo: recordNo,
+        computerId: generateNumber(
+          "CMP",
+          year,
+          computerSequence
+        )
       };
+    } else {
+      recordNo = generateNumber(
+        type.slice(0, 4).toUpperCase()
+      );
     }
 
     try {
       const result = await query(
-        `INSERT INTO ${table}
-          (
-            record_no,
-            session,
-            class_name,
-            section,
-            name,
-            phone,
-            admission_no,
-            status,
-            event_date,
-            payment_mode,
-            vehicle_no,
-            route_name,
-            form_data,
-            created_by
-          )
-         VALUES
-          ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
-         RETURNING id, record_no, form_data, created_at`,
+        `
+        INSERT INTO ${table}
+        (
+          record_no,
+          session,
+          class_name,
+          section,
+          name,
+          phone,
+          admission_no,
+          status,
+          event_date,
+          payment_mode,
+          vehicle_no,
+          route_name,
+          form_data,
+          created_by
+        )
+        VALUES
+        ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        RETURNING id, record_no, form_data, created_at
+        `,
         [
           recordNo,
           common.session,
@@ -557,12 +576,12 @@ export async function createRecord(type, data, meta = {}) {
           common.name,
           common.phone,
           common.admissionNo,
-          common.status || 'active',
+          common.status || "active",
           common.eventDate || null,
           common.paymentMode,
           common.vehicleNo,
           common.routeName,
-          JSON.stringify(data),
+          JSON.stringify(finalData),
           meta.userId
         ]
       );
@@ -570,8 +589,7 @@ export async function createRecord(type, data, meta = {}) {
       return result.rows[0];
 
     } catch (err) {
-
-      if (err.code === '23505' && type === 'enquiry') {
+      if (err.code === "23505" && type === "enquiry") {
         continue;
       }
 
@@ -581,10 +599,52 @@ export async function createRecord(type, data, meta = {}) {
 
   throw Object.assign(
     new Error(
-      'Unable to generate a unique enquiry number. Please try again.'
+      "Unable to generate a unique enquiry number. Please try again."
     ),
     { status: 500 }
   );
+}
+
+
+async function nextSequentialValue(prefix, valueExpression) {
+  const year = new Date().getFullYear();
+  const table = TABLE_MAP.registration;
+
+  const pattern = `^${prefix}-${year}-([0-9]+)$`;
+
+  const result = await query(
+    `
+    INSERT INTO record_number_counters
+      (prefix, year, last_value)
+
+    SELECT
+      $1,
+      $2,
+      COALESCE(
+        MAX(
+          NULLIF(
+            substring(${valueExpression} FROM $3),
+            ''
+          )::BIGINT
+        ),
+        0
+      ) + 1
+
+    FROM ${table}
+
+    ON CONFLICT (prefix, year)
+    DO UPDATE SET
+      last_value = GREATEST(
+        record_number_counters.last_value,
+        EXCLUDED.last_value - 1
+      ) + 1
+
+    RETURNING last_value
+    `,
+    [prefix, year, pattern]
+  );
+
+  return Number(result.rows[0].last_value);
 }
 
 /* =========================================================

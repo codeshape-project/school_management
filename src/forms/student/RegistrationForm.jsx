@@ -1959,15 +1959,15 @@ import {
 } from "lucide-react";
 import PrintPreview from "../../components/PrintPreview";
 import { SCHOOL_INFO } from "../../config/schoolInfo";
-function generateComputerNumber() {
-  const year = new Date().getFullYear();
+// function generateComputerNumber() {
+//   const year = new Date().getFullYear();
 
-  const uniqueId = globalThis.crypto?.randomUUID
-    ? globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 8)
-    : Math.random().toString(36).substring(2, 10);
+//   const uniqueId = globalThis.crypto?.randomUUID
+//     ? globalThis.crypto.randomUUID().replace(/-/g, "").slice(0, 8)
+//     : Math.random().toString(36).substring(2, 10);
 
-  return `CMP-${year}-${uniqueId.toUpperCase()}`;
-}
+//   return `CMP-${year}-${uniqueId.toUpperCase()}`;
+// }
 export default function RegistrationForm({ onClose }) {
   const [saved, setSaved] = useState(false);
   const formRef = useRef(null);
@@ -1985,13 +1985,13 @@ const [registrationSlip, setRegistrationSlip] = useState(null);
     studentBy,
     studentValue
   );
-useEffect(() => {
-  const computerField = formRef.current?.elements.namedItem("computerId");
+// useEffect(() => {
+//   const computerField = formRef.current?.elements.namedItem("computerId");
 
-  if (computerField && !computerField.value) {
-    computerField.value = generateComputerNumber();
-  }
-}, []);
+//   if (computerField && !computerField.value) {
+//     computerField.value = generateComputerNumber();
+//   }
+// }, []);
   // put values into the form fields (fields are matched by their name)
   const fillForm = (values) => {
     const formEl = formRef.current;
@@ -2045,9 +2045,9 @@ useEffect(() => {
         new FormData(e.currentTarget).entries()
       );
 // Ensure Computer Number is always generated
-if (!data.computerId) {
-  data.computerId = generateComputerNumber();
-}
+// if (!data.computerId) {
+//   data.computerId = generateComputerNumber();
+// }
       // search boxes are not part of the registration data
       Object.keys(data).forEach((key) => {
         if (key.startsWith("search")) delete data[key];
@@ -2056,10 +2056,11 @@ if (!data.computerId) {
       const response = await saveForm("registration", data);
       const savedRecord = response?.data || response;
       const finalData = {
-        ...data,
-        formNo: savedRecord?.record_no || data.formNo,
-        computerId: savedRecord?.form_data?.computerId || data.computerId || "",
-      };
+  ...data,
+  formNo: savedRecord?.record_no || data.formNo,
+  computerId: savedRecord?.form_data?.computerId || data.computerId || "",
+};
+fillForm(finalData);
       // The backend persists these generated values in form_data. Fetch them
       // from the saved payload when returned, otherwise use the saved number.
       if (savedRecord?.record_no) finalData.formNo = savedRecord.record_no;
@@ -2240,10 +2241,10 @@ if (!data.computerId) {
                   lg:grid-cols-4
                 "
               >
-               <Field
+          <Field
   name="computerId"
   label="Computer Number (Auto)"
-  placeholder="Auto Generated"
+  placeholder="Generated on Save"
   readOnly
 />
 
