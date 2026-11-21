@@ -141,6 +141,7 @@
 //   if (!endpoint) throw new Error(`Unknown form type: ${type}`);
 //   return endpoint;
 // }
+
 import { notify } from "../components/Toast";
 const API_BASE =
   import.meta.env.VITE_API_URL ||
@@ -400,12 +401,38 @@ export function downloadReportExcel(body) {
    by: name | mobile | fatherName | enquiredBy | admissionNo ...
 ===================================================== */
 
-export async function searchRecords(type, by, q, status, extra = {}) {
-  const params = new URLSearchParams({ by: by || "", q: q || "" });
+// export async function searchRecords(type, by, q, status, extra = {}) {
+//   const params = new URLSearchParams({ by: by || "", q: q || "" });
 
-  if (status) params.set("status", status);
+//   if (status) params.set("status", status);
 
-  // optional filters: { className, section, limit }
+//   // optional filters: { className, section, limit }
+//   Object.entries(extra).forEach(([key, value]) => {
+//     if (value !== undefined && value !== null && value !== "") {
+//       params.set(key, value);
+//     }
+//   });
+
+//   return apiFetch(
+//     `${getFormEndpoint(type)}/search?${params.toString()}`
+//   );
+// }
+export async function searchRecords(
+  type,
+  by,
+  q,
+  status,
+  extra = {}
+) {
+  const params = new URLSearchParams({
+    by: by || "",
+    q: q || "",
+  });
+
+  if (status) {
+    params.set("status", status);
+  }
+
   Object.entries(extra).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
       params.set(key, value);

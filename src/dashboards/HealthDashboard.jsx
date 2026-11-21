@@ -305,7 +305,7 @@ export default function HealthDashboard({ onBack }) {
           lg:max-w-[calc(100vw-245px)]
           lg:max-h-[calc(100vh-72px)]
         ">
-          <div className="min-w-[280px] bg-white/95 p-5 shadow-xl">
+          {/* <div className="min-w-[280px] bg-white/95 p-5 shadow-xl">
 
             <p className="
               text-[10px] font-bold uppercase
@@ -327,7 +327,7 @@ export default function HealthDashboard({ onBack }) {
               </p>
             </div>
 
-          </div>
+          </div> */}
         </div>
 
       </div>

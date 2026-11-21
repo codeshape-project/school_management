@@ -272,40 +272,6 @@ export default function LibraryDashboard({ onBack }) {
           }}
         />
 
-        {/* CONTENT WINDOW */}
-        <div className="
-          fixed z-30
-          left-[8px] top-[62px]
-          max-w-[calc(100vw-16px)]
-          max-h-[calc(100vh-70px)]
-          overflow-auto rounded-2xl
-          lg:left-[228px] lg:top-[62px]
-          lg:max-w-[calc(100vw-245px)]
-          lg:max-h-[calc(100vh-72px)]
-        ">
-          <div className="min-w-[280px] bg-white/95 p-5 shadow-xl">
-            <p className="
-              text-[10px] font-bold uppercase
-              tracking-[.18em] text-[#061a3a]
-            ">
-              Library Management
-            </p>
-
-            <h1 className="mt-1 text-2xl font-black text-slate-800">
-              {active}
-            </h1>
-
-            <div className="
-              mt-5 rounded-xl border
-              border-slate-200 bg-slate-50 p-5
-            ">
-              <p className="text-sm text-slate-500">
-                {active} module
-              </p>
-            </div>
-          </div>
-        </div>
-
       </div>
     </div>
   );

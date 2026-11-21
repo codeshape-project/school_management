@@ -1149,9 +1149,8 @@
 //   );
 // }
 
-
 import { saveForm, searchRecords } from "../../api/formApi";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SCHOOL_INFO } from "../../config/schoolInfo";
 import {
   FileCheck,
@@ -1163,7 +1162,7 @@ import {
 } from "lucide-react";
 
 export default function TransferCertificateForm({ onClose }) {
-   const [saved, setSaved] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [printData, setPrintData] = useState(null);
   const formRef = useRef(null);
 
@@ -1171,10 +1170,10 @@ export default function TransferCertificateForm({ onClose }) {
   const [searchBy, setSearchBy] = useState("admissionNo");
   const [searchValue, setSearchValue] = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [searchState, setSearchState] = useState("idle");
-    const [searchError, setSearchError] = useState(""); // idle | loading | done | empty | error
+  const [searchState, setSearchState] = useState("idle"); // idle | loading | done | empty | error
+  const [searchError, setSearchError] = useState("");
 
-    async function runSearch() {
+  async function runSearch() {
     const term = searchValue.trim();
 
     if (!term) {
@@ -1188,7 +1187,7 @@ export default function TransferCertificateForm({ onClose }) {
 
     try {
       const result = await searchRecords("student", searchBy, term, "All");
-      const rows = result?.data || [];
+      const rows = Array.isArray(result) ? result : result?.data || [];
 
       setSearchResults(rows);
       setSearchState(rows.length ? "done" : "empty");
@@ -1199,6 +1198,15 @@ export default function TransferCertificateForm({ onClose }) {
       setSearchState("error");
     }
   }
+
+  // search while typing (runs 0.35s after typing stops)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (searchValue.trim()) runSearch();
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchValue, searchBy]);
 
   // put values into the form fields (fields are matched by their name)
   function fillForm(values) {
@@ -1227,6 +1235,7 @@ export default function TransferCertificateForm({ onClose }) {
       dateOfBirth: data.dateOfBirth,
       className: row.class_name || data.className,
       category: data.category,
+      religion: data.religion,
       dateOfAdmission: data.dateOfAdmission,
       admissionInClass: data.admissionInClass,
     });
@@ -1499,10 +1508,16 @@ setPrintData({
               defaultValue="Indian"
             />
 
-            <Field
+                       <Field
               name="category"
               label="Category"
               placeholder="Category"
+            />
+
+            <Field
+              name="religion"
+              label="Religion"
+              placeholder="Religion"
             />
 
             <DateField
@@ -1871,9 +1886,9 @@ setPrintData({
                 value={searchBy}
                 onChange={(e) => setSearchBy(e.target.value)}
               >
-                <option value="admissionNo">
+                {/* <option value="admissionNo">
                   Admission No.
-                </option>
+                </option> */}
                 <option value="studentName">
                   Student Name
                 </option>

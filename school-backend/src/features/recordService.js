@@ -187,39 +187,205 @@
 import { query } from '../config/db.js';
 import { generateNumber } from '../utils/generateNumber.js';
 
-const SEARCH_EXPR = {
-  name: "to_jsonb(r)->>'name'",
-  studentName: "to_jsonb(r)->>'name'",
+// const REG_NO_EXPR = `
+//   (
+//     COALESCE(to_jsonb(r)->>'record_no', '') || ' ' ||
+//     COALESCE(to_jsonb(r)->>'registration_no', '') || ' ' ||
+//     COALESCE(to_jsonb(r)->>'form_no', '') || ' ' ||
+//     COALESCE(to_jsonb(r)->'form_data'->>'formNo', '') || ' ' ||
+//     COALESCE(to_jsonb(r)->'form_data'->>'registrationNo', '') || ' ' ||
+//     COALESCE(to_jsonb(r)->'form_data'->>'registrationFormNo', '') || ' ' ||
+//     COALESCE(to_jsonb(r)->'form_data'->>'admissionFormNo', '') || ' ' ||
+//     COALESCE(to_jsonb(r)->'form_data'->>'regNo', '')
+//   )
+// `;
+const NAME_EXPR = `
+  COALESCE(
+    NULLIF(to_jsonb(r)->>'name', ''),
+    to_jsonb(r)->'form_data'->>'name',
+    to_jsonb(r)->'form_data'->>'studentName',
+    ''
+  )
+`;
 
-  formNo: `(
+const REG_NO_EXPR = `
+  (
+    COALESCE(to_jsonb(r)->>'record_no', '') || ' ' ||
     COALESCE(to_jsonb(r)->'form_data'->>'formNo', '') || ' ' ||
+    COALESCE(to_jsonb(r)->'form_data'->>'registrationNo', '') || ' ' ||
+    COALESCE(to_jsonb(r)->'form_data'->>'regNo', '')
+  )
+`;
+
+const PHONE_EXPR = `
+  COALESCE(
+    to_jsonb(r)->>'phone',
+    to_jsonb(r)->'form_data'->>'mobile',
+    to_jsonb(r)->'form_data'->>'contactNo',
+    ''
+  )
+`;
+
+const SEARCH_EXPR = {
+  name: NAME_EXPR,
+  studentName: NAME_EXPR,
+
+  formNo: REG_NO_EXPR,
+  registrationNo: REG_NO_EXPR,
+  regNo: REG_NO_EXPR,
+
+  admissionFormNo: `
+    COALESCE(to_jsonb(r)->'form_data'->>'admissionFormNo', '')
+  `,
+
+  computerId: `
+    COALESCE(to_jsonb(r)->'form_data'->>'computerId', '')
+  `,
+
+  mobile: PHONE_EXPR,
+  phone: PHONE_EXPR,
+
+  enquiryNo: `
     COALESCE(to_jsonb(r)->>'record_no', '')
-  )`,
+  `,
 
-  admissionFormNo:
-    "COALESCE(to_jsonb(r)->'form_data'->>'admissionFormNo', '')",
+  contact: `
+    (
+      COALESCE(to_jsonb(r)->>'phone', '') || ' ' ||
+      COALESCE(to_jsonb(r)->'form_data'->>'contactNo', '') || ' ' ||
+      COALESCE(to_jsonb(r)->'form_data'->>'presentContactNo', '') || ' ' ||
+      COALESCE(to_jsonb(r)->'form_data'->>'permanentContactNo', '') || ' ' ||
+      COALESCE(to_jsonb(r)->'form_data'->>'mobile', '')
+    )
+  `,
 
-  computerId:
-    "COALESCE(to_jsonb(r)->'form_data'->>'computerId', '')",
+  admissionNo: `
+    (
+      COALESCE(to_jsonb(r)->>'admission_no', '') || ' ' ||
+      COALESCE(to_jsonb(r)->'form_data'->>'admissionNo', '') || ' ' ||
+      COALESCE(to_jsonb(r)->'form_data'->>'admissionFormNo', '')
+    )
+  `,
 
-  mobile: "to_jsonb(r)->>'phone'",
-  phone: "to_jsonb(r)->>'phone'",
+  fatherName: `
+    COALESCE(to_jsonb(r)->'form_data'->>'fatherName', '')
+  `,
 
-  enquiryNo: "to_jsonb(r)->>'record_no'",
+  motherName: `
+    COALESCE(to_jsonb(r)->'form_data'->>'motherName', '')
+  `,
 
-  contact: `(
-    COALESCE(to_jsonb(r)->>'phone', '') || ' ' ||
-    COALESCE(to_jsonb(r)->'form_data'->>'contactNo', '') || ' ' ||
-    COALESCE(to_jsonb(r)->'form_data'->>'presentContactNo', '') || ' ' ||
-    COALESCE(to_jsonb(r)->'form_data'->>'permanentContactNo', '')
-  )`,
-
-  admissionNo: "to_jsonb(r)->>'admission_no'",
-
-  fatherName: "to_jsonb(r)->'form_data'->>'fatherName'",
-  motherName: "to_jsonb(r)->'form_data'->>'motherName'",
-  enquiredBy: "to_jsonb(r)->'form_data'->>'enquiredBy'",
+  enquiredBy: `
+    COALESCE(to_jsonb(r)->'form_data'->>'enquiredBy', '')
+  `,
 };
+// const SEARCH_EXPR = {
+//   name: `
+//     COALESCE(
+//       to_jsonb(r)->>'name',
+//       to_jsonb(r)->'form_data'->>'studentName',
+//       ''
+//     )
+//   `,
+//   formNo: REG_NO_EXPR,
+//   registrationNo: REG_NO_EXPR,
+//   registrationFormNo: REG_NO_EXPR,
+//   admissionFormNo: REG_NO_EXPR,
+//   regNo: REG_NO_EXPR,
+// name: `
+//   COALESCE(
+//     to_jsonb(r)->>'name',
+//     to_jsonb(r)->'form_data'->>'name',
+//     to_jsonb(r)->'form_data'->>'studentName',
+//     ''
+//   )
+// `,
+
+// studentName: `
+//   COALESCE(
+//     to_jsonb(r)->>'name',
+//     to_jsonb(r)->'form_data'->>'name',
+//     to_jsonb(r)->'form_data'->>'studentName',
+//     ''
+//   )
+// `,
+//   studentName: `
+//     COALESCE(
+//       to_jsonb(r)->>'name',
+//       to_jsonb(r)->'form_data'->>'studentName',
+//       ''
+//     )
+//   `,
+
+//   formNo: `
+//     (
+//       COALESCE(to_jsonb(r)->'form_data'->>'formNo', '') || ' ' ||
+//       COALESCE(to_jsonb(r)->>'record_no', '')
+//     )
+//   `,
+
+//   admissionFormNo: `
+//     COALESCE(
+//       to_jsonb(r)->'form_data'->>'admissionFormNo',
+//       ''
+//     )
+//   `,
+
+//   computerId: `
+//     COALESCE(
+//       to_jsonb(r)->'form_data'->>'computerId',
+//       ''
+//     )
+//   `,
+
+//   mobile: `
+//     COALESCE(
+//       to_jsonb(r)->>'phone',
+//       to_jsonb(r)->'form_data'->>'mobile',
+//       to_jsonb(r)->'form_data'->>'contactNo',
+//       ''
+//     )
+//   `,
+
+//   phone: `
+//     COALESCE(
+//       to_jsonb(r)->>'phone',
+//       to_jsonb(r)->'form_data'->>'mobile',
+//       to_jsonb(r)->'form_data'->>'contactNo',
+//       ''
+//     )
+//   `,
+
+//   enquiryNo: `
+//     COALESCE(to_jsonb(r)->>'record_no', '')
+//   `,
+
+//   contact: `
+//     (
+//       COALESCE(to_jsonb(r)->>'phone', '') || ' ' ||
+//       COALESCE(to_jsonb(r)->'form_data'->>'contactNo', '') || ' ' ||
+//       COALESCE(to_jsonb(r)->'form_data'->>'presentContactNo', '') || ' ' ||
+//       COALESCE(to_jsonb(r)->'form_data'->>'permanentContactNo', '') || ' ' ||
+//       COALESCE(to_jsonb(r)->'form_data'->>'mobile', '')
+//     )
+//   `,
+
+//   admissionNo: `
+//     COALESCE(to_jsonb(r)->>'admission_no', '')
+//   `,
+
+//   fatherName: `
+//     COALESCE(to_jsonb(r)->'form_data'->>'fatherName', '')
+//   `,
+
+//   motherName: `
+//     COALESCE(to_jsonb(r)->'form_data'->>'motherName', '')
+//   `,
+
+//   enquiredBy: `
+//     COALESCE(to_jsonb(r)->'form_data'->>'enquiredBy', '')
+//   `,
+// };
 /* =========================================================
    TABLE MAP
 ========================================================= */

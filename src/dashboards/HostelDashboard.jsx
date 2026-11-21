@@ -166,26 +166,11 @@ export default function HostelDashboard({ onBack }) {
           className="fixed bottom-0 left-0 right-0 top-[54px] overflow-y-auto bg-cover bg-center bg-no-repeat px-2 py-2 sm:px-4 lg:left-[220px]"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(239,246,250,.72),rgba(239,246,250,.91)),url('/images/hostel-dashboard.jpg')",
+              "url('/images/hostel-dashboard.jpg')",
           }}
         >
           {/* Content */}
-          <div className="w-full border-x border-b border-white/80 bg-white/95 px-4 py-5 shadow-lg sm:px-6">
-            <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#08234d]">
-              Hostel Management
-            </p>
-
-            <h1 className="mt-1 text-2xl font-black text-slate-800">
-              {active}
-            </h1>
-
-            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm text-slate-500">
-                This module is ready for its detailed forms. Select a section
-                from the sidebar.
-              </p>
-            </div>
-          </div>
+         
         </main>
       </div>
     </div>
