@@ -4,6 +4,7 @@ import studentRoutes from './shared/student/studentRoutes.js'; import studentLed
 import enquiryRoutes from './features/student/enquiry/enquiryRoutes.js'; import studentReportRoutes from './features/student/studentReport/studentReportRoutes.js'; import registrationRoutes from './features/student/registration/registrationRoutes.js'; import complaintRoutes from './features/student/complaint/complaintRoutes.js'; import tcRoutes from './features/student/transferCertificate/transferCertificateRoutes.js';
 import receiptRoutes from './features/fee/receipt/receiptRoutes.js'; import collectionRoutes from './features/fee/collection/collectionRoutes.js'; import blankReceiptRoutes from './features/fee/blankReceipt/blankReceiptRoutes.js';
 import transportRoutes from './features/transport/transportAllotment/transportAllotmentRoutes.js'; import vehiclewiseStudentRoutes from './features/transport/vehiclewiseStudent/vehiclewiseStudentRoutes.js'; import conveyanceStudentRoutes from './features/transport/conveyanceStudent/conveyanceStudentRoutes.js'; import conveyanceAmountRoutes from './features/transport/conveyanceAmount/conveyanceAmountRoutes.js';
+import libraryRoutes from './library/libraryRoutes.js';
 import { env } from './config/env.js'; import { notFoundMiddleware } from './middleware/notFoundMiddleware.js'; import { errorMiddleware } from './middleware/errorMiddleware.js';
 
 const app=express();
@@ -14,5 +15,6 @@ app.use('/api/student',studentRoutes); app.use('/api/student-ledger',studentLedg
 app.use('/api/enquiries',enquiryRoutes); app.use('/api/student-report',studentReportRoutes); app.use('/api/registrations',registrationRoutes); app.use('/api/complaints',complaintRoutes); app.use('/api/transfer-certificates',tcRoutes);
 app.use('/api/fee-receipts',receiptRoutes); app.use('/api/fee-collections',collectionRoutes); app.use('/api/blank-receipts',blankReceiptRoutes);
 app.use('/api/transport-allotments',transportRoutes); app.use('/api/vehiclewise-students',vehiclewiseStudentRoutes); app.use('/api/conveyance-students',conveyanceStudentRoutes); app.use('/api/conveyance-amounts',conveyanceAmountRoutes);
+app.use('/api/library',libraryRoutes);
 app.use('/uploads',express.static('uploads'));
 app.use(notFoundMiddleware); app.use(errorMiddleware); export default app;

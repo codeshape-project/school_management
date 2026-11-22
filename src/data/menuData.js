@@ -38,3 +38,10 @@ export const transportNavbar = [
   "Master", "Transport", "Reports", "Conveyance Report", "Dues Report",
   "Collection Report", "Repair & Maintenance", "Exit"
 ];
+export const librarySidebar = [
+  "Book Entry", "Member Registration", "Issue Book", "Return Book", "Library Report"
+];
+
+export const libraryNavbar = [
+  "Master", "Book Entry", "Member Registration", "Issue Book", "Return Book", "Library Report", "Exit"
+];
