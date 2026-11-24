@@ -37,7 +37,7 @@
 
 import { buildReport } from "../builder/reportBuilder.js";
 import { getFieldCatalog, getFilterOptions } from "../fields/reportFields.js";
-import { REPORT_GROUPS } from "../sources/sourceConfig.js";
+import { REPORT_GROUPS, SOURCE_CONFIG } from "../sources/sourceConfig.js";
 
 export async function previewReport(body = {}) {
   return buildReport(body);
@@ -60,7 +60,16 @@ export async function getReportMeta(source) {
     getFieldCatalog(source),
     getFilterOptions(source),
   ]);
-  return { source, fields, options };
+  // optional screen settings (labels, hidden filters, default columns) for this report type
+  const cfg = SOURCE_CONFIG[source] || {};
+  const ui = {
+    filterLabels: cfg.filters?.labels || {},
+    hiddenFilters: cfg.filters?.hide || [],
+    defaultColumns: cfg.defaultColumns || null,
+    dateLabel: cfg.dateLabel || "",
+  };
+
+  return { source, fields, options, ui };
 }
 
 export const REPORT_FILTERS = [

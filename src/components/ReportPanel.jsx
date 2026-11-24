@@ -95,6 +95,9 @@ export default function ReportPanel({
 
   const [report, setReport] = useState(null);
 
+  // optional per-report screen settings from the server (labels, hidden filters, default columns)
+  const [ui, setUi] = useState({});
+
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -254,7 +257,10 @@ export default function ReportPanel({
 
         const formKeys = nextFields.form.map((f) => f.key);
 
-        const defaults = [
+        const nextUi = meta.ui || {};
+        setUi(nextUi);
+
+        const defaults = nextUi.defaultColumns?.length ? nextUi.defaultColumns : [
           ...DEFAULT_COLUMN_KEYS,
           ...PREFERRED_FORM_FIELDS.map((k) => `f:${k}`).filter((k) =>
             formKeys.includes(k)
@@ -322,6 +328,11 @@ export default function ReportPanel({
   }
 
   function selectDefaultColumns() {
+    if (ui.defaultColumns?.length) {
+      setSelectedColumns(ui.defaultColumns);
+      return;
+    }
+
     const formKeys = fields.form.map((f) => f.key);
 
     setSelectedColumns([
@@ -424,6 +435,19 @@ export default function ReportPanel({
     }
   }
 
+  // sort / filter wording for this report type (e.g. Department / Designation for staff)
+  const sortOptions = SORTS.map(([value, label]) => {
+    if (value === "class_name:asc" && ui.filterLabels?.className) {
+      return [value, `${ui.filterLabels.className} / ${ui.filterLabels.section || "Section"}`];
+    }
+    if (value === "event_date:desc" && ui.dateLabel) {
+      return [value, `${ui.dateLabel} (latest)`];
+    }
+    return [value, label];
+  });
+  const filterName = (key, fallback) => ui.filterLabels?.[key] || fallback;
+  const showFilter = (key) => !(ui.hiddenFilters || []).includes(key);
+
   const columns = report?.columns || [];
   const rows = report?.rows || [];
   const totalKeys = Object.keys(report?.totals || {});
@@ -507,7 +531,7 @@ export default function ReportPanel({
               label="Sort By"
               value={sort}
               onChange={(e) => setSort(e.target.value)}
-              options={SORTS}
+              options={sortOptions}
             />
 
             <SelectField
@@ -516,7 +540,7 @@ export default function ReportPanel({
               onChange={(e) => setDateBasis(e.target.value)}
               options={[
                 ["created", "Entry date (saved on)"],
-                ["event", "Form date"],
+                ["event", ui.dateLabel || "Form date"],
               ]}
             />
           </div>
@@ -585,7 +609,7 @@ export default function ReportPanel({
             />
 
             <SelectField
-              label="Class"
+              label={filterName("className", "Class")}
               name="className"
               value={filters.className}
               onChange={handleFilterChange}
@@ -594,7 +618,7 @@ export default function ReportPanel({
             />
 
             <SelectField
-              label="Section"
+              label={filterName("section", "Section")}
               name="section"
               value={filters.section}
               onChange={handleFilterChange}
@@ -602,23 +626,27 @@ export default function ReportPanel({
               allLabel="All"
             />
 
-            <SelectField
-              label="Status"
-              name="status"
-              value={filters.status}
-              onChange={handleFilterChange}
-              options={options.statuses.map((v) => [v, v])}
-              allLabel="All"
-            />
+            {showFilter("status") && (
+              <SelectField
+                label="Status"
+                name="status"
+                value={filters.status}
+                onChange={handleFilterChange}
+                options={options.statuses.map((v) => [v, v])}
+                allLabel="All"
+              />
+            )}
 
-            <SelectField
-              label="Payment Mode"
-              name="paymentMode"
-              value={filters.paymentMode}
-              onChange={handleFilterChange}
-              options={options.paymentModes.map((v) => [v, v])}
-              allLabel="All"
-            />
+            {showFilter("paymentMode") && (
+              <SelectField
+                label="Payment Mode"
+                name="paymentMode"
+                value={filters.paymentMode}
+                onChange={handleFilterChange}
+                options={options.paymentModes.map((v) => [v, v])}
+                allLabel="All"
+              />
+            )}
 
             <div>
               <label className={labelClass}>Search</label>

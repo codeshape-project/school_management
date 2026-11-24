@@ -137,7 +137,9 @@ export function humanize(key = "") {
 /* Turn requested column keys into safe column definitions.
    "name"        -> real DB column
    "f:address"   -> value stored inside form_data JSON */
-export function resolveColumns(requested = []) {
+export function resolveColumns(requested = [], cfg = {}) {
+  const labels = cfg.labels || {};
+  const fieldLabels = cfg.fieldLabels || {};
   const out = [];
   const seen = new Set();
 
@@ -146,12 +148,13 @@ export function resolveColumns(requested = []) {
     if (seen.has(key)) continue;
 
     if (BASE_MAP.has(key)) {
-      out.push({ ...BASE_MAP.get(key), kind: "base" });
+      const column = BASE_MAP.get(key);
+      out.push({ ...column, label: labels[key] || column.label, kind: "base" });
       seen.add(key);
     } else if (key.startsWith("f:")) {
       const field = key.slice(2);
       if (/^[\w .\-/()]{1,80}$/.test(field)) {
-        out.push({ key, label: humanize(field), kind: "form", field });
+        out.push({ key, label: fieldLabels[field] || humanize(field), kind: "form", field });
         seen.add(key);
       }
     }
@@ -168,7 +171,16 @@ export async function getFieldCatalog(source) {
     throw Object.assign(new Error(`Unknown report type: ${source}`), { status: 400 });
   }
 
-  const base = BASE_COLUMNS.map(({ key, label }) => ({ key, label, kind: "base" }));
+  // optional per-report labels / hidden columns (used by Staff & Salary)
+  const labels = cfg.labels || {};
+  const hidden = new Set(cfg.hidden || []);
+  const fieldLabels = cfg.fieldLabels || {};
+
+  const base = BASE_COLUMNS.filter((c) => !hidden.has(c.key)).map(({ key, label }) => ({
+    key,
+    label: labels[key] || label,
+    kind: "base",
+  }));
   const baseKeys = new Set(BASE_COLUMNS.map((c) => c.key));
 
   const result = await pool.query(
@@ -183,10 +195,16 @@ export async function getFieldCatalog(source) {
       LIMIT 300`
   );
 
-  const form = result.rows
-    .map((r) => r.key)
+  // keys that really exist in the saved data, plus the fields this report is known to have
+  // (so the column list is complete even before the first record is saved)
+  let formKeys = result.rows.map((r) => r.key);
+  if (cfg.knownFields?.length) {
+    formKeys = [...new Set([...formKeys, ...cfg.knownFields])].sort();
+  }
+
+  const form = formKeys
     .filter((k) => !baseKeys.has(k) && !/^search/i.test(k) && /^[\w .\-/()]{1,80}$/.test(k))
-    .map((k) => ({ key: `f:${k}`, label: humanize(k), kind: "form" }));
+    .map((k) => ({ key: `f:${k}`, label: fieldLabels[k] || humanize(k), kind: "form" }));
 
   return { base, form };
 }
@@ -227,10 +245,15 @@ export async function getFilterOptions(source) {
 
   const merge = (master, used) => [...new Set([...master, ...used])];
 
+  // Staff reports use department / designation lists instead of the student class / section masters
+  const ownLists = cfg.masterLists === false;
+  const classBase = ownLists ? cfg.defaultClasses || [] : masterClasses;
+  const sectionBase = ownLists ? cfg.defaultSections || [] : masterSections;
+
   return {
     sessions,
-    classes: merge(masterClasses, classes),
-    sections: merge(masterSections, sections),
+    classes: merge(classBase, classes),
+    sections: merge(sectionBase, sections),
     statuses,
     paymentModes,
   };

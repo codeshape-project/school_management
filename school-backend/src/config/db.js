@@ -3,6 +3,11 @@
 
 // const { Pool } = pg;
 
+// Return DATE columns as plain 'YYYY-MM-DD' text instead of JS Date objects.
+// A Date is created at local midnight, so on a server in India (UTC+5:30)
+// JSON turns 2026-04-01 into 2026-03-31T18:30Z and every date shows one day early.
+pg.types.setTypeParser(1082, (value) => value);
+
 // export const pool = new Pool({
 //   host: env.db.host,
 //   port: env.db.port,

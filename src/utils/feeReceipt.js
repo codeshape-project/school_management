@@ -93,7 +93,7 @@ function todayText() {
 }
 
 // "12-09-2026" or "2026-09-12" -> "12/09/2026"
-function slashDate(value) {
+export function slashDate(value) {
   const text = String(value || "").trim();
   if (!text) return todayText();
 
@@ -109,7 +109,7 @@ function slashDate(value) {
 }
 
 // "2026 - 27" -> "FEE-26-27"
-function feeTypeFromSession(session) {
+export function feeTypeFromSession(session) {
   const m = String(session || "").match(/(\d{4})\s*-\s*(\d{2,4})/);
   if (!m) return "-";
   return `FEE-${m[1].slice(2)}-${m[2].slice(-2)}`;
@@ -222,7 +222,7 @@ export function buildReceiptHtml(data) {
 <html>
 <head>
 <meta charset="utf-8" />
-<title>Fee Receipt ${e(data.recNo)}</title>
+<title>${e(data.docTitle || "Fee Receipt")} ${e(data.recNo)}</title>
 <style>
   /* slip size = half of A4 (A5), standing / vertical */
   @page { size: 148mm 210mm; margin: 6mm; }
@@ -353,7 +353,7 @@ export function buildReceiptHtml(data) {
 
   <hr class="rule" />
 
-  <div class="banner">FEE PAYMENT RECEIPT</div>
+  <div class="banner">${e(data.title || "FEE PAYMENT RECEIPT")}</div>
 
   <table class="info">
     <colgroup>

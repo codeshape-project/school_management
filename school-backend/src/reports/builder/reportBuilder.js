@@ -210,7 +210,8 @@ import {
 
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const TOTAL_LABEL = /amount|paid|due|balance|fee|total|fine|discount|concession|charge/i;
+const TOTAL_LABEL =
+  /amount|paid|due|balance|fee|total|fine|discount|concession|charge|salary|gross|deduction|allowance|advance/i;
 
 const SORT_EXPR = {
   created_at: "created_at",
@@ -334,8 +335,8 @@ export function buildSql(body = {}) {
 
   const filters = body.filters || {};
   const requested = Array.isArray(body.columns) ? body.columns : [];
-  let columns = resolveColumns(requested);
-  if (!columns.length) columns = resolveColumns(DEFAULT_COLUMNS);
+  let columns = resolveColumns(requested, cfg);
+  if (!columns.length) columns = resolveColumns(cfg.defaultColumns || DEFAULT_COLUMNS, cfg);
 
   const range = resolvePeriod({
     period: body.period,
@@ -399,8 +400,9 @@ function describeFilters(q) {
   }
 
   push("Session", f.session);
-  push("Class", f.className);
-  push("Section", f.section);
+  const names = q.cfg.filters?.labels || {};
+  push(names.className || "Class", f.className);
+  push(names.section || "Section", f.section);
   push("Status", f.status);
   push("Payment Mode", f.paymentMode);
   push("Search", f.search);

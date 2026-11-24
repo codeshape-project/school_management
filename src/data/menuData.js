@@ -45,3 +45,19 @@ export const librarySidebar = [
 export const libraryNavbar = [
   "Master", "Book Entry", "Member Registration", "Issue Book", "Return Book", "Library Report", "Exit"
 ];
+
+export const hostelSidebar = [
+  "Hostel Master", "Room Management", "Hostel Allotment", "Hostel Fees", "Hostel Dues", "Hostel Report"
+];
+
+export const hostelNavbar = [
+  "Master", "Hostel Master", "Room Management", "Hostel Allotment", "Hostel Fees", "Hostel Dues", "Hostel Report", "Exit"
+];
+
+export const salarySidebar = [
+  "Staff Registration", "Staff Attendance", "Salary Entry", "Salary Report", "Staff Report"
+];
+
+export const salaryNavbar = [
+  "Master", "Staff Registration", "Staff Attendance", "Salary Entry", "Salary Report", "Staff Report", "Exit"
+];

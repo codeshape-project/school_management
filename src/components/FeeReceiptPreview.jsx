@@ -7,10 +7,15 @@ import { buildReceiptHtml } from "../utils/feeReceipt";
   Shows the fee receipt slip (A4) in a window with Print / Close.
   data = result of buildReceiptData(...)
 */
-export default function FeeReceiptPreview({ data, onClose }) {
+export default function FeeReceiptPreview({
+  data,
+  onClose,
+  buildHtml = buildReceiptHtml, // other slips (e.g. salary) pass their own builder
+  printLabel = "Print Receipt",
+}) {
   const frameRef = useRef(null);
 
-  const html = useMemo(() => buildReceiptHtml(data), [data]);
+  const html = useMemo(() => buildHtml(data), [data, buildHtml]);
 
   function printReceipt() {
     const frame = frameRef.current;
@@ -24,7 +29,7 @@ export default function FeeReceiptPreview({ data, onClose }) {
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-3">
       <div className="flex h-full max-h-[96vh] w-full max-w-[680px] flex-col overflow-hidden rounded-xl border-2 border-[#0b2a52] bg-[#dbe9f4] shadow-2xl">
         <div className="flex shrink-0 items-center justify-between gap-2 bg-gradient-to-r from-[#174f7b] via-[#216994] to-[#174f7b] px-3 py-2 text-white">
-          <h3 className="text-sm font-black">Fee Receipt</h3>
+          <h3 className="text-sm font-black">{data.docTitle || "Fee Receipt"}</h3>
 
           <div className="flex items-center gap-2">
             <button
@@ -33,7 +38,7 @@ export default function FeeReceiptPreview({ data, onClose }) {
               className="flex h-8 items-center gap-1.5 rounded-md border border-emerald-600 bg-emerald-600 px-4 text-[11px] font-extrabold text-white transition-all hover:bg-emerald-700"
             >
               <Printer size={14} strokeWidth={2.5} />
-              Print Receipt
+              {printLabel}
             </button>
 
             <button
