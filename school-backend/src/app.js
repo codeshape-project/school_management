@@ -7,6 +7,7 @@ import transportRoutes from './features/transport/transportAllotment/transportAl
 import libraryRoutes from './library/libraryRoutes.js';
 import hostelRoutes from './hostel/hostelRoutes.js';
 import staffRoutes from './staff/staffRoutes.js';
+import icardRoutes from './icard/icardRoutes.js';
 import { env } from './config/env.js'; import { notFoundMiddleware } from './middleware/notFoundMiddleware.js'; import { errorMiddleware } from './middleware/errorMiddleware.js';
 
 const app=express();
@@ -20,5 +21,6 @@ app.use('/api/transport-allotments',transportRoutes); app.use('/api/vehiclewise-
 app.use('/api/library',libraryRoutes);
 app.use('/api/hostel',hostelRoutes);
 app.use('/api/staff',staffRoutes);
+app.use('/api/icard',icardRoutes);
 app.use('/uploads',express.static('uploads'));
 app.use(notFoundMiddleware); app.use(errorMiddleware); export default app;

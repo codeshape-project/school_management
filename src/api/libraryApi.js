@@ -41,28 +41,33 @@ const qs = (obj) => {
 };
 
 export const libraryApi = {
-  books: (q = "", status = "all") => request(`/books${qs({ q, status })}`),
-  lookupBook: (bookNo) => request(`/books/lookup/${encodeURIComponent(bookNo)}`),
-  saveBook: (data, id) => request(id ? `/books/${id}` : "/books", send(id ? "PUT" : "POST", data)),
+  books: (q = "", status = "all") =>
+    request(`/books${qs({ q, status })}`),
 
-  members: (q = "", status = "all") => request(`/members${qs({ q, status })}`),
-  saveMember: (data, id) => request(id ? `/members/${id}` : "/members", send(id ? "PUT" : "POST", data)),
+  lookupBook: (bookNo) =>
+    request(`/books/lookup/${encodeURIComponent(bookNo)}`),
 
-  students: (q) => request(`/students/search${qs({ q })}`),
+  saveBook: (data, id) =>
+    request(id ? `/books/${id}` : "/books",
+      send(id ? "PUT" : "POST", data)),
+
+  members: (q = "", status = "all") =>
+    request(`/members${qs({ q, status })}`),
+
+  saveMember: (data, id) =>
+    request(id ? `/members/${id}` : "/members",
+      send(id ? "PUT" : "POST", data)),
+
+  students: (q) =>
+    request(`/students/search${qs({ q })}`),
+
   issue: (data) => request("/issues", send("POST", data)),
-  activeIssues: (q = "") => request(`/issues/active${qs({ q })}`),
+
+  activeIssues: (q = "") =>
+    request(`/issues/active${qs({ q })}`),
+
   returnBook: (data) => request("/returns", send("POST", data)),
 
-  reportData: (range = {}) => request(`/reports/data${qs(range)}`),
-  download: async (type, range = {}) => {
-    const blob = await request(`/reports/${type}${qs(range)}`);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `library-report.${type === "excel" ? "xlsx" : "pdf"}`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  },
+  reportData: (range = {}) =>
+    request(`/reports/data${qs(range)}`),
 };

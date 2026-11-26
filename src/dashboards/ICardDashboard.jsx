@@ -1,5 +1,10 @@
 
 import { useState } from "react";
+import { SCHOOL_INFO } from "../config/schoolInfo";
+import StudentICardForm from "../forms/icard/StudentICardForm";
+import StaffICardForm from "../forms/icard/StaffICardForm";
+import TemplateForm from "../forms/icard/TemplateForm";
+import PrintICardForm from "../forms/icard/PrintICardForm";
 import {
   Menu,
   X,
@@ -25,14 +30,23 @@ const icons = {
   "Print": Printer,
 };
 
+const forms = {
+  "Student I-Card": StudentICardForm,
+  "Staff I-Card": StaffICardForm,
+  "Templates": TemplateForm,
+  "Print": PrintICardForm,
+};
+
 export default function ICardDashboard({ onBack }) {
-  const [active, setActive] = useState(items[0]);
+  const [active, setActive] = useState(null);
   const [open, setOpen] = useState(false);
 
   const handleOpen = (item) => {
     setActive(item);
     setOpen(false);
   };
+
+  const Form = active ? forms[active] : null;
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -76,7 +90,7 @@ export default function ICardDashboard({ onBack }) {
               mt-1.5 text-sm font-black
               tracking-wide text-white
             ">
-              School Name
+              {SCHOOL_INFO.name || "School Name"}
             </p>
           </div>
 
@@ -292,12 +306,25 @@ export default function ICardDashboard({ onBack }) {
           "
           style={{
             backgroundImage:
-              "url('/images/icard-dashboard.jpg')",
+              "url('/images/icard-dashboard.jpg'), url('/images/student-dashboard.jpg')",
           }}
         />
 
-        
-
+        {/* FORM WINDOW - the form draws its own header, sections and buttons */}
+        {Form && (
+          <div
+            className="
+              fixed left-[8px] top-[62px] z-30
+              max-h-[calc(100vh-70px)] max-w-[calc(100vw-16px)]
+              overflow-hidden rounded-2xl
+              lg:left-[228px] lg:max-h-[calc(100vh-72px)] lg:max-w-[calc(100vw-245px)]
+            "
+          >
+            <div className="relative h-auto w-auto">
+              <Form key={active} onClose={() => setActive(null)} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
